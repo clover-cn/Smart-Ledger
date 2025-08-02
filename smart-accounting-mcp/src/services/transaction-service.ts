@@ -2,7 +2,7 @@ import { TransactionData, Transaction } from '../types/transaction.js';
 import { StorageService } from './storage-service.js';
 import { generateTransactionId, isValidAmount } from '../utils/id-generator.js';
 import { getSmartCategory } from '../utils/smart-categorizer.js';
-
+import { formatTimestamp } from '../utils/Common.js';
 /**
  * TransactionService - 交易业务逻辑服务
  * 负责处理交易数据的验证、转换和存储
@@ -31,7 +31,7 @@ export class TransactionService {
       category: data.category || getSmartCategory(data.description, data.type),
       description: data.description,
       tags: data.tags || [],
-      timestamp: new Date()
+      timestamp: formatTimestamp()
     };
 
     try {
@@ -74,7 +74,7 @@ export class TransactionService {
       category: data.category || getSmartCategory(data.description, data.type),
       description: data.description,
       tags: data.tags || [],
-      timestamp: new Date()
+      timestamp: formatTimestamp()
     }));
 
     try {
@@ -188,7 +188,11 @@ export class TransactionService {
       const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
       
       // 过滤时间窗口内的交易
-      const recentTransactions = allTransactions.filter(tx => tx.timestamp >= cutoffTime);
+      const recentTransactions = allTransactions.filter(tx => {
+        // 将字符串时间戳转换为 Date 对象进行比较
+        const txDate = new Date(tx.timestamp);
+        return txDate >= cutoffTime;
+      });
       
       // 查找相似交易
       const similarTransactions = recentTransactions

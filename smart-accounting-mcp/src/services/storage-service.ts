@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs';
 import { Transaction } from '../types/transaction.js';
-
 /**
  * StorageService - 数据持久化服务
  * 负责将交易记录保存到JSON文件并读取
@@ -180,11 +179,8 @@ export class StorageService {
         return [];
       }
 
-      // 将时间戳字符串转换回Date对象
-      return transactions.map(transaction => ({
-        ...transaction,
-        timestamp: new Date(transaction.timestamp)
-      }));
+      // 直接返回交易记录，时间戳已经是格式化的字符串
+      return transactions;
 
     } catch (error) {
       if (error instanceof SyntaxError) {

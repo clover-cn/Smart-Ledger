@@ -53,7 +53,7 @@ server.tool(
                 category: transaction.category,
                 description: transaction.description,
                 tags: transaction.tags,
-                timestamp: transaction.timestamp.toISOString()
+                timestamp: transaction.timestamp
               }
             }, null, 2)
           }
@@ -127,7 +127,7 @@ server.tool(
                 category: t.category,
                 description: t.description,
                 tags: t.tags,
-                timestamp: t.timestamp.toISOString()
+                timestamp: t.timestamp
               }))
             }, null, 2)
           }
@@ -171,7 +171,7 @@ server.tool(
               count: transactions.length,
               transactions: transactions.map(t => ({
                 ...t,
-                timestamp: t.timestamp.toISOString()
+                timestamp: t.timestamp
               }))
             }, null, 2)
           }
@@ -278,9 +278,9 @@ server.tool(
                 amount: tx.amount,
                 category: tx.category,
                 description: tx.description,
-                timestamp: tx.timestamp.toISOString(),
+                timestamp: tx.timestamp,
                 similarity: Math.round(tx.similarity * 100) / 100, // 保留2位小数
-                timeDiff: Math.round((Date.now() - tx.timestamp.getTime()) / (1000 * 60)) // 分钟差
+                timeDiff: Math.round((Date.now() - new Date(tx.timestamp).getTime()) / (1000 * 60)) // 分钟差
               }))
             }, null, 2)
           }

@@ -32,6 +32,6 @@ export interface Transaction {
   description: string;
   /** 标签 */
   tags: string[];
-  /** 记录时间，由系统生成 */
-  timestamp: Date;
+  /** 记录时间，由系统生成，格式化为本地时间字符串 */
+  timestamp: string;
 }
