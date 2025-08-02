@@ -1,0 +1,29 @@
+[
+  {
+    "id": "tx_mdtojdh7_jybhu6",
+    "type": "expense",
+    "amount": 7,
+    "category": "餐饮美食",
+    "description": "朕今日早餐吃了7块钱！",
+    "tags": [],
+    "timestamp": "2025-08-02T03:15:14.299Z"
+  },
+  {
+    "id": "tx_mdtolu1k_deb7a7",
+    "type": "income",
+    "amount": 2000,
+    "category": "工资收入",
+    "description": "今天发工资啦，只有2000块钱",
+    "tags": [],
+    "timestamp": "2025-08-02T03:17:09.080Z"
+  },
+  {
+    "id": "tx_mdtooa64_h73vp6",
+    "type": "expense",
+    "amount": 6000,
+    "category": "电子产品",
+    "description": "购买手机",
+    "tags": [],
+    "timestamp": "2025-08-02T03:19:03.292Z"
+  }
+]
