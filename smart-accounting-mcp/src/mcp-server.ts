@@ -240,3 +240,66 @@ server.tool(
     }
   }
 );
+
+// 检查重复交易工具 - 重复检测功能
+server.tool(
+  "checkDuplicateTransaction",
+  "检查是否存在重复或相似的交易记录 - 在记录交易前使用此工具检测潜在的重复记录，避免重复添加相同的交易。基于金额、描述、类型和时间窗口进行智能相似度匹配。",
+  {
+    type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
+    amount: z.number().positive().describe("交易金额，必须为正数"),
+    description: z.string().min(1).describe("交易描述，用于相似度匹配"),
+    category: z.string().optional().describe("交易分类（可选），用于提高匹配准确性"),
+    hoursBack: z.number().positive().default(24).optional().describe("检查时间窗口（小时），默认24小时")
+  },
+  async ({ type, amount, description, category, hoursBack = 24 }) => {
+    console.log("检查重复交易", { type, amount, description, category, hoursBack });
+    
+    try {
+      const result = await transactionService.checkDuplicateTransaction({
+        type,
+        amount,
+        description,
+        category
+      }, hoursBack);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              hasSimilar: result.hasSimilar,
+              suggestion: result.suggestion,
+              similarCount: result.similarTransactions.length,
+              similarTransactions: result.similarTransactions.map(tx => ({
+                id: tx.id,
+                type: tx.type,
+                amount: tx.amount,
+                category: tx.category,
+                description: tx.description,
+                timestamp: tx.timestamp.toISOString(),
+                similarity: Math.round(tx.similarity * 100) / 100, // 保留2位小数
+                timeDiff: Math.round((Date.now() - tx.timestamp.getTime()) / (1000 * 60)) // 分钟差
+              }))
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("检查重复交易失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "检查重复交易失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
