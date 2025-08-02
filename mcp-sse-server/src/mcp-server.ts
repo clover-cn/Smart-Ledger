@@ -8,19 +8,19 @@ const transactionService = new TransactionService();
 export const server = new McpServer({
   name: "smart-accounting-mcp",
   version: "1.0.0",
-  description: "智能记账MCP服务器 - 提供自然语言记账功能，支持收入和支出记录"
+  description: "专业记账MCP服务器 - 仅用于记录明确的金钱收支交易。只有当用户明确表达要记录收入、支出、花费、赚钱等财务交易时才应调用此工具。不适用于平常聊天场景。"
 });
 
 // 记录交易工具 - 核心功能
 server.tool(
   "recordTransaction",
-  "记录一笔交易（收入或支出）",
+  "记录金钱收支交易 - 仅当用户明确表达要记录具体的收入、支出、花费、购买等涉及金钱的交易时使用。不要用于技术问题、文件操作或其他非财务场景。",
   {
     type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
-    amount: z.number().positive().describe("金额，必须为正数"),
-    category: z.string().optional().describe("分类（建议提供），请根据描述内容判断合适的分类，如：餐饮美食、交通出行、服装鞋帽、电子产品等。如未提供将使用智能分类"),
-    description: z.string().min(1).describe("描述信息，记录用户的原始输入"),
-    tags: z.array(z.string()).optional().describe("标签（可选），例如 ['reimbursement'] 表示可报销")
+    amount: z.number().positive().describe("交易金额，必须为正数"),
+    category: z.string().optional().describe("交易分类（可选），如：餐饮美食、交通出行、服装鞋帽、电子产品等。如未提供将自动分类"),
+    description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
+    tags: z.array(z.string()).optional().describe("交易标签（可选），例如 ['reimbursement'] 表示可报销")
   },
   async ({ type, amount, category, description, tags }) => {
     console.log("处理记账请求", { type, amount, category, description, tags });
@@ -80,7 +80,7 @@ server.tool(
 // 获取所有交易记录工具
 server.tool(
   "getAllTransactions",
-  "获取所有交易记录",
+  "获取所有已记录的财务交易记录 - 用于查看历史收支明细",
   {},
   async () => {
     console.log("获取所有交易记录");
@@ -124,7 +124,7 @@ server.tool(
 // 获取交易统计工具
 server.tool(
   "getTransactionSummary",
-  "获取交易统计信息",
+  "获取财务统计汇总 - 计算总收入、总支出、余额等统计信息",
   {},
   async () => {
     console.log("获取交易统计信息");

@@ -45,14 +45,39 @@ app.get("/sse", async (req, res) => {
   await mcpServer.connect(transport);
   console.log(`[${new Date().toISOString()}] MCP服务器连接成功: ${sessionId}`);
 
-//   // 发送心跳包以保持连接
-//   const heartbeatInterval = setInterval(() => {
-//     res.write('event: heartbeat\ndata: ' + Date.now() + '\n\n');
-//   }, 30000);
+  // 发送心跳包以保持连接，防止连接中断
+  const heartbeatInterval = setInterval(() => {
+    try {
+      // 检查连接是否仍然有效
+      if (!res.headersSent || res.destroyed) {
+        clearInterval(heartbeatInterval);
+        return;
+      }
+      res.write('event: heartbeat\ndata: ' + JSON.stringify({
+        timestamp: Date.now(),
+        sessionId: sessionId
+      }) + '\n\n');
+      console.log(`[${new Date().toISOString()}] 心跳发送成功: ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] 心跳发送失败: ${sessionId}`, error);
+      clearInterval(heartbeatInterval);
+      connections.delete(sessionId);
+    }
+  }, 30000);
   
-//   req.on('close', () => {
-//     clearInterval(heartbeatInterval);
-//   });
+  // 监听连接关闭事件
+  req.on('close', () => {
+    clearInterval(heartbeatInterval);
+  });
+  
+  // 监听连接错误事件
+  req.on('error', (error) => {
+    console.error(`[${new Date().toISOString()}] SSE连接错误: ${sessionId}`, error);
+    clearInterval(heartbeatInterval);
+    connections.delete(sessionId);
+  });
+  
 });
 
 // 接收客户端消息的端点
