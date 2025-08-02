@@ -48,6 +48,52 @@ export class TransactionService {
   }
 
   /**
+   * 批量记录多笔交易
+   * @param dataList 调用方提供的交易数据数组
+   * @returns 完整的交易记录对象数组
+   */
+  async recordTransactionBatch(dataList: TransactionData[]): Promise<Transaction[]> {
+    if (!dataList || dataList.length === 0) {
+      throw new Error('交易数据列表不能为空');
+    }
+
+    // 验证所有输入数据
+    dataList.forEach((data, index) => {
+      try {
+        this.validateTransactionData(data);
+      } catch (error) {
+        throw new Error(`第${index + 1}笔交易数据无效: ${error instanceof Error ? error.message : '未知错误'}`);
+      }
+    });
+
+    // 构建完整的Transaction对象数组
+    const transactions: Transaction[] = dataList.map(data => ({
+      id: generateTransactionId(),
+      type: data.type,
+      amount: data.amount,
+      category: data.category || getSmartCategory(data.description, data.type),
+      description: data.description,
+      tags: data.tags || [],
+      timestamp: new Date()
+    }));
+
+    try {
+      // 批量保存到存储服务
+      await this.storageService.saveBatch(transactions);
+      
+      console.log(`批量记录 ${transactions.length} 笔交易成功`);
+      transactions.forEach(t => {
+        console.log(`- ${t.type} ¥${t.amount} - ${t.category}`);
+      });
+      
+      return transactions;
+    } catch (error) {
+      console.error('批量记录交易时发生错误:', error);
+      throw error; // 重新抛出存储错误
+    }
+  }
+
+  /**
    * 验证交易数据的有效性
    * @param data 要验证的交易数据
    * @throws 如果数据无效则抛出错误

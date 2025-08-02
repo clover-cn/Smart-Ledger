@@ -77,6 +77,80 @@ server.tool(
   }
 );
 
+// 批量记录交易工具 - 解决并发问题的核心功能
+server.tool(
+  "recordTransactionBatch",
+  "批量记录多笔金钱收支交易 - 当用户在一句话中提到多笔交易时使用此工具，可避免并发写入问题。例如：'今天买了早餐7块钱，还买了雪糕2块钱，还买了衣服200块钱'，仅当用户明确表达要记录具体的收入、支出、花费、购买等涉及金钱的交易时使用。",
+  {
+    transactions: z.array(z.object({
+      type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
+      amount: z.number().positive().describe("交易金额，必须为正数"),
+      category: z.string().optional().describe("交易分类（可选），如：餐饮美食、交通出行、服装鞋帽、电子产品等。如未提供将自动分类"),
+      description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
+      tags: z.array(z.string()).optional().describe("交易标签（可选），例如 ['reimbursement'] 表示可报销")
+    })).min(1).describe("交易记录数组，至少包含一笔交易")
+  },
+  async ({ transactions }) => {
+    console.log("处理批量记账请求", { count: transactions.length, transactions });
+    
+    try {
+      const savedTransactions = await transactionService.recordTransactionBatch(transactions);
+
+      // 构建确认消息
+      const totalAmount = savedTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const expenseCount = savedTransactions.filter(t => t.type === 'expense').length;
+      const incomeCount = savedTransactions.filter(t => t.type === 'income').length;
+      
+      let summaryMessage = `已批量记录 ${savedTransactions.length} 笔交易`;
+      if (expenseCount > 0) summaryMessage += `，支出 ${expenseCount} 笔`;
+      if (incomeCount > 0) summaryMessage += `，收入 ${incomeCount} 笔`;
+      summaryMessage += `，总金额 ¥${totalAmount}`;
+
+      const detailMessages = savedTransactions.map(t => {
+        const typeText = t.type === 'expense' ? '支出' : '收入';
+        const reimbursableText = t.tags?.includes('reimbursement') || t.tags?.includes('可报销') ? '可报销' : '';
+        return `${reimbursableText}${typeText}：${t.category} ¥${t.amount}`;
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: summaryMessage,
+              details: detailMessages,
+              transactions: savedTransactions.map(t => ({
+                id: t.id,
+                type: t.type,
+                amount: t.amount,
+                category: t.category,
+                description: t.description,
+                tags: t.tags,
+                timestamp: t.timestamp.toISOString()
+              }))
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("批量记账失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "批量记账失败，请检查输入信息"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
 // 获取所有交易记录工具
 server.tool(
   "getAllTransactions",

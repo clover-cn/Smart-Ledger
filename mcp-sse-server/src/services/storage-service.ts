@@ -7,32 +7,146 @@ import { Transaction } from '../types/transaction.js';
  */
 export class StorageService {
   private dbPath: string;
+  private lockFile: string;
+  private isWriting: boolean = false;
+  private writeQueue: Array<() => Promise<void>> = [];
 
   constructor(dbPath: string = 'db.json') {
     this.dbPath = dbPath;
+    this.lockFile = `${dbPath}.lock`;
   }
 
   /**
-   * 将交易记录追加到JSON文件中
+   * 获取文件锁，防止并发写入
+   */
+  private async acquireLock(): Promise<void> {
+    const maxRetries = 50;
+    const retryDelay = 100;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        // 尝试创建锁文件
+        await fs.writeFile(this.lockFile, process.pid.toString(), { flag: 'wx' });
+        return;
+      } catch (error: any) {
+        if (error.code === 'EEXIST') {
+          // 锁文件已存在，等待后重试
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('无法获取文件锁，操作超时');
+  }
+
+  /**
+   * 释放文件锁
+   */
+  private async releaseLock(): Promise<void> {
+    try {
+      await fs.unlink(this.lockFile);
+    } catch (error: any) {
+      // 忽略锁文件不存在的错误
+      if (error.code !== 'ENOENT') {
+        console.warn('释放文件锁时发生警告:', error);
+      }
+    }
+  }
+
+  /**
+   * 将交易记录追加到JSON文件中（带锁保护）
    * @param transaction 要保存的交易记录
    */
   async save(transaction: Transaction): Promise<void> {
-    try {
-      // 读取现有数据
-      const existingTransactions = await this.getAll();
+    return new Promise((resolve, reject) => {
+      // 将操作加入队列
+      this.writeQueue.push(async () => {
+        await this.acquireLock();
+        try {
+          // 读取现有数据
+          const existingTransactions = await this.getAll();
+          
+          // 添加新交易记录
+          existingTransactions.push(transaction);
+          
+          // 将数据序列化并写入文件
+          const jsonData = JSON.stringify(existingTransactions, null, 2);
+          await fs.writeFile(this.dbPath, jsonData, 'utf-8');
+          
+          console.log(`交易记录已保存: ${transaction.id}`);
+          resolve();
+        } catch (error) {
+          console.error('保存交易记录时发生错误:', error);
+          reject(new Error(`无法保存交易记录: ${error instanceof Error ? error.message : '未知错误'}`));
+        } finally {
+          await this.releaseLock();
+        }
+      });
       
-      // 添加新交易记录
-      existingTransactions.push(transaction);
+      // 处理队列
+      this.processWriteQueue();
+    });
+  }
+
+  /**
+   * 批量保存多笔交易记录
+   * @param transactions 要保存的交易记录数组
+   */
+  async saveBatch(transactions: Transaction[]): Promise<void> {
+    if (transactions.length === 0) return;
+    
+    return new Promise((resolve, reject) => {
+      this.writeQueue.push(async () => {
+        await this.acquireLock();
+        try {
+          // 读取现有数据
+          const existingTransactions = await this.getAll();
+          
+          // 添加所有新交易记录
+          existingTransactions.push(...transactions);
+          
+          // 将数据序列化并写入文件
+          const jsonData = JSON.stringify(existingTransactions, null, 2);
+          await fs.writeFile(this.dbPath, jsonData, 'utf-8');
+          
+          console.log(`批量保存 ${transactions.length} 笔交易记录成功`);
+          resolve();
+        } catch (error) {
+          console.error('批量保存交易记录时发生错误:', error);
+          reject(new Error(`无法批量保存交易记录: ${error instanceof Error ? error.message : '未知错误'}`));
+        } finally {
+          await this.releaseLock();
+        }
+      });
       
-      // 将数据序列化并写入文件
-      const jsonData = JSON.stringify(existingTransactions, null, 2);
-      await fs.writeFile(this.dbPath, jsonData, 'utf-8');
-      
-      console.log(`交易记录已保存: ${transaction.id}`);
-    } catch (error) {
-      console.error('保存交易记录时发生错误:', error);
-      throw new Error(`无法保存交易记录: ${error instanceof Error ? error.message : '未知错误'}`);
+      // 处理队列
+      this.processWriteQueue();
+    });
+  }
+
+  /**
+   * 处理写入队列，确保串行执行
+   */
+  private async processWriteQueue(): Promise<void> {
+    if (this.isWriting || this.writeQueue.length === 0) {
+      return;
     }
+    
+    this.isWriting = true;
+    
+    while (this.writeQueue.length > 0) {
+      const operation = this.writeQueue.shift();
+      if (operation) {
+        try {
+          await operation();
+        } catch (error) {
+          console.error('写入队列操作失败:', error);
+        }
+      }
+    }
+    
+    this.isWriting = false;
   }
 
   /**
