@@ -45,7 +45,7 @@ app.get("/sse", async (req, res) => {
   await mcpServer.connect(transport);
   console.log(`[${new Date().toISOString()}] MCP服务器连接成功: ${sessionId}`);
 
-  // 发送心跳包以保持连接，防止连接中断
+  // 发送心跳包以保持连接，防止连接中断（可以不需要心跳检测）
   const heartbeatInterval = setInterval(() => {
     try {
       // 检查连接是否仍然有效
