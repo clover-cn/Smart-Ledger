@@ -352,7 +352,7 @@ server.tool(
 // 修改交易记录工具 - 提示不支持功能
 server.tool(
   "updateTransaction",
-  "修改已记录的财务交易 - 根据交易ID修改交易信息",
+  "修改已记录的财务交易 - 根据交易ID修改交易信息(暂时不支持，请手动到记账应用的网页版上进行操作)",
   {
     id: z.string().describe("要修改的交易记录ID"),
     type: z.enum(['income', 'expense']).optional().describe("交易类型：income（收入）或 expense（支出）"),
@@ -385,7 +385,7 @@ server.tool(
 // 删除交易记录工具 - 提示不支持功能
 server.tool(
   "deleteTransaction",
-  "删除已记录的财务交易 - 根据交易ID删除交易记录",
+  "删除已记录的财务交易 - 根据交易ID删除交易记录(暂时不支持，请手动到记账应用的网页版上进行操作)",
   {
     id: z.string().describe("要删除的交易记录ID")
   },
