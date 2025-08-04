@@ -137,6 +137,36 @@ export class TransactionService {
   }
 
   /**
+   * 获取当天的交易记录
+   * @returns 当天的交易记录
+   */
+  async getTodayTransactions(): Promise<Transaction[]> {
+    try {
+      const allTransactions = await this.getAllTransactions();
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      // 筛选当天的交易记录
+      const todayTransactions = allTransactions.filter(tx => {
+        // 解析时间戳 格式：YYYY-MM-DD HH:mm:ss
+        const txDate = new Date(tx.timestamp);
+        return txDate >= todayStart && txDate < todayEnd;
+      });
+      
+      // 按时间倒序排列（最新的在前面）
+      return todayTransactions.sort((a, b) => {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        return dateB.getTime() - dateA.getTime();
+      });
+    } catch (error) {
+      console.error('获取当天交易记录时发生错误:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 按类型获取交易记录统计
    * @returns 收入和支出的统计信息
    */

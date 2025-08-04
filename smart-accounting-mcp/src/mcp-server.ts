@@ -195,6 +195,51 @@ server.tool(
   }
 );
 
+// 获取当天交易记录工具
+server.tool(
+  "getTodayTransactions",
+  "获取当天的财务交易记录 - 只返回今日的收支明细，相比获取全部记录更高效，减少上下文占用",
+  {},
+  async () => {
+    console.log("获取当天交易记录");
+    
+    try {
+      const todayTransactions = await transactionService.getTodayTransactions();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              date: new Date().toISOString().split('T')[0], // 当前日期 YYYY-MM-DD
+              count: todayTransactions.length,
+              transactions: todayTransactions.map(t => ({
+                ...t,
+                timestamp: t.timestamp
+              }))
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("获取当天交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "获取当天交易记录失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
 // 获取交易统计工具
 server.tool(
   "getTransactionSummary",
@@ -301,5 +346,66 @@ server.tool(
         ]
       };
     }
+  }
+);
+
+// 修改交易记录工具 - 提示不支持功能
+server.tool(
+  "updateTransaction",
+  "修改已记录的财务交易 - 根据交易ID修改交易信息",
+  {
+    id: z.string().describe("要修改的交易记录ID"),
+    type: z.enum(['income', 'expense']).optional().describe("交易类型：income（收入）或 expense（支出）"),
+    amount: z.number().positive().optional().describe("交易金额，必须为正数"),
+    category: z.string().optional().describe("交易分类"),
+    description: z.string().optional().describe("交易描述"),
+    tags: z.array(z.string()).optional().describe("交易标签")
+  },
+  async ({ id, type, amount, category, description, tags }) => {
+    console.log("用户尝试修改交易记录", { id, type, amount, category, description, tags });
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            supported: false,
+            message: "抱歉，修改账单功能暂时不支持",
+            instruction: "如需修改账单，请手动到记账应用的网页版上进行操作",
+            requestedId: id,
+            note: "为确保数据安全和一致性，修改功能需要在网页版中进行"
+          }, null, 2)
+        }
+      ]
+    };
+  }
+);
+
+// 删除交易记录工具 - 提示不支持功能
+server.tool(
+  "deleteTransaction",
+  "删除已记录的财务交易 - 根据交易ID删除交易记录",
+  {
+    id: z.string().describe("要删除的交易记录ID")
+  },
+  async ({ id }) => {
+    console.log("用户尝试删除交易记录", { id });
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            supported: false,
+            message: "抱歉，删除账单功能暂时不支持",
+            instruction: "如需删除账单，请手动到记账应用的网页版上进行操作",
+            requestedId: id,
+            note: "为确保数据安全和防止误删，删除功能需要在网页版中进行"
+          }, null, 2)
+        }
+      ]
+    };
   }
 );
