@@ -151,50 +151,6 @@ server.tool(
   }
 );
 
-// 获取所有交易记录工具
-server.tool(
-  "getAllTransactions",
-  "获取所有已记录的财务交易记录 - 用于查看历史收支明细",
-  {},
-  async () => {
-    console.log("获取所有交易记录");
-    
-    try {
-      const transactions = await transactionService.getAllTransactions();
-      
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              success: true,
-              count: transactions.length,
-              transactions: transactions.map(t => ({
-                ...t,
-                timestamp: t.timestamp
-              }))
-            }, null, 2)
-          }
-        ]
-      };
-    } catch (error: any) {
-      console.error("获取交易记录失败:", error);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              success: false,
-              error: error.message,
-              message: "获取交易记录失败"
-            }, null, 2)
-          }
-        ]
-      };
-    }
-  }
-);
-
 // 获取当天交易记录工具
 server.tool(
   "getTodayTransactions",
@@ -232,6 +188,50 @@ server.tool(
               success: false,
               error: error.message,
               message: "获取当天交易记录失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
+// 获取所有交易记录工具
+server.tool(
+  "getAllTransactions",
+  "获取所有已记录的财务交易记录 - 用于查看历史收支明细",
+  {},
+  async () => {
+    console.log("获取所有交易记录");
+    
+    try {
+      const transactions = await transactionService.getAllTransactions();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              count: transactions.length,
+              transactions: transactions.map(t => ({
+                ...t,
+                timestamp: t.timestamp
+              }))
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("获取交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "获取交易记录失败"
             }, null, 2)
           }
         ]
@@ -346,6 +346,54 @@ server.tool(
         ]
       };
     }
+  }
+);
+
+// 账单管理限制说明工具 - 专门说明修改和删除功能的限制
+server.tool(
+  "getAccountingLimitations",
+  "获取记账系统的功能限制说明 - 当用户询问修改、删除、编辑账单相关功能时，使用此工具说明系统限制，避免调用不支持的操作，需要重复记录时必须经过用户明确同意。",
+  {},
+  async () => {
+    console.log("用户查询账单管理限制");
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: true,
+            limitations: {
+              modify: {
+                supported: false,
+                message: "修改账单功能暂时不支持",
+                instruction: "如需修改已记录的账单，请手动到记账应用的网页版上进行操作"
+              },
+              delete: {
+                supported: false,
+                message: "删除账单功能暂时不支持",
+                instruction: "如需删除已记录的账单，请手动到记账应用的网页版上进行操作"
+              },
+              edit: {
+                supported: false,
+                message: "编辑账单功能暂时不支持",
+                instruction: "如需编辑已记录的账单，请手动到记账应用的网页版上进行操作"
+              }
+            },
+            supportedOperations: [
+              "记录新的收入交易",
+              "记录新的支出交易",
+              "批量记录多笔交易",
+              "查看所有交易记录",
+              "查看当天交易记录",
+              "获取交易统计汇总",
+              "检查重复交易记录"
+            ],
+            webAppNote: "所有修改、删除、编辑操作请在记账应用的网页版中完成，以确保数据安全性和一致性"
+          }, null, 2)
+        }
+      ]
+    };
   }
 );
 
