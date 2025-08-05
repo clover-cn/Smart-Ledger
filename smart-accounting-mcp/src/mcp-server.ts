@@ -27,7 +27,7 @@ export const server = new McpServer({
 // 检查重复交易工具 - 重复检测功能
 server.tool(
   "checkDuplicateTransaction",
-  "检查是否存在重复或相似的交易记录 - 在记录交易前使用此工具检测潜在的重复记录，避免重复添加相同的交易。基于金额、描述、类型和时间窗口进行智能相似度匹配。",
+  "必须先检查是否存在重复或相似的交易记录 - 在记录交易前使用此工具检测潜在的重复记录，避免重复添加相同的交易。基于金额、描述、类型和时间窗口进行智能相似度匹配。",
   {
     type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
     amount: z.number().positive().describe("交易金额，必须为正数"),
@@ -95,8 +95,8 @@ server.tool(
     type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
     amount: z.number().positive().describe("交易金额，必须为正数"),
     category: z.string().optional().describe(`交易分类(必须)，${categoryList}`),
-    description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
-    tags: z.array(z.string()).optional().describe("交易标签(可选)，例如 ['reimbursement'] 表示可报销")
+    description: z.string().min(1).describe("交易描述，必须记录用户的原始输入内容。"),
+    tags: z.array(z.string()).optional().describe("交易标签(可选)，例如 ['reimbursement'] 表示可报销"),
   },
   async ({ type, amount, category, description, tags }) => {
     console.log("处理记账请求", { type, amount, category, description, tags });
@@ -162,7 +162,7 @@ server.tool(
       type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
       amount: z.number().positive().describe("交易金额，必须为正数"),
       category: z.string().optional().describe(`交易分类(必须)，${categoryList}`),
-      description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
+      description: z.string().min(1).describe("交易描述，必须记录用户的原始输入内容。"),
       tags: z.array(z.string()).optional().describe("交易标签(可选)，例如 ['reimbursement'] 表示可报销")
     })).min(1).describe("交易记录数组，至少包含一笔交易")
   },

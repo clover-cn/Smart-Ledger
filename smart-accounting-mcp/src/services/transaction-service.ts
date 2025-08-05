@@ -3,6 +3,7 @@ import { StorageService } from './storage-service.js';
 import { generateTransactionId, isValidAmount } from '../utils/id-generator.js';
 import { getSmartCategory } from '../utils/smart-categorizer.js';
 import { formatTimestamp } from '../utils/Common.js';
+import { parseRelativeDate } from '../utils/date-parser.js';
 /**
  * TransactionService - 交易业务逻辑服务
  * 负责处理交易数据的验证、转换和存储
@@ -23,6 +24,18 @@ export class TransactionService {
     // 验证输入数据
     this.validateTransactionData(data);
 
+    // 处理时间戳 - 支持相对时间解析
+    let timestamp: string;
+    
+    // 尝试从描述中解析相对时间
+    const parseResult = parseRelativeDate(data.description);
+    if (parseResult.found && parseResult.timestamp) {
+      timestamp = parseResult.timestamp;
+      console.log(`检测到相对时间: "${parseResult.keyword}" -> ${timestamp}`);
+    } else {
+      timestamp = formatTimestamp();
+    }
+
     // 构建完整的Transaction对象
     const transaction: Transaction = {
       id: generateTransactionId(),
@@ -31,7 +44,7 @@ export class TransactionService {
       category: data.category || getSmartCategory(data.description, data.type),
       description: data.description,
       tags: data.tags || [],
-      timestamp: formatTimestamp()
+      timestamp: timestamp
     };
 
     try {
@@ -67,15 +80,29 @@ export class TransactionService {
     });
 
     // 构建完整的Transaction对象数组
-    const transactions: Transaction[] = dataList.map(data => ({
-      id: generateTransactionId(),
-      type: data.type,
-      amount: data.amount,
-      category: data.category || getSmartCategory(data.description, data.type),
-      description: data.description,
-      tags: data.tags || [],
-      timestamp: formatTimestamp()
-    }));
+    const transactions: Transaction[] = dataList.map(data => {
+      // 处理时间戳 - 支持相对时间解析
+      let timestamp: string;
+      
+      // 尝试从描述中解析相对时间
+      const parseResult = parseRelativeDate(data.description);
+      if (parseResult.found && parseResult.timestamp) {
+        timestamp = parseResult.timestamp;
+        console.log(`检测到相对时间: "${parseResult.keyword}" -> ${timestamp}`);
+      } else {
+        timestamp = formatTimestamp();
+      }
+
+      return {
+        id: generateTransactionId(),
+        type: data.type,
+        amount: data.amount,
+        category: data.category || getSmartCategory(data.description, data.type),
+        description: data.description,
+        tags: data.tags || [],
+        timestamp: timestamp
+      };
+    });
 
     try {
       // 批量保存到存储服务
