@@ -32,7 +32,7 @@ server.tool(
     type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
     amount: z.number().positive().describe("交易金额，必须为正数"),
     description: z.string().min(1).describe("交易描述，用于相似度匹配"),
-    category: z.string().optional().describe("交易分类（可选），用于提高匹配准确性"),
+    category: z.string().optional().describe("交易分类(必须)，用于提高匹配准确性"),
     hoursBack: z.number().positive().default(24).optional().describe("检查时间窗口（小时），默认24小时")
   },
   async ({ type, amount, description, category, hoursBack = 24 }) => {
