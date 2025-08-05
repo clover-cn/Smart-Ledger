@@ -4,7 +4,20 @@ import { TransactionService } from "./services/transaction-service.js";
 
 // 创建智能记账服务实例
 const transactionService = new TransactionService();
+const categoryList = `请根据交易内容选择合适的分类，没有合适的分类请使用“其他”：
+支出分类：
+餐饮 休闲娱乐 购物 穿搭美容 水果零食
+交通 生活日用 人情社交 宠物 养娃
+运动 生活服务 买菜 住房 爱车
+发红包 转账 学习教育 网络虚拟 烟酒
+医疗保健 金融保险 家居家电 酒店旅行 公益
+互助保障 其他。
 
+收入分类：
+工资 兼职 投资理财 人情社交 奖金补贴
+报销 生意 卖二手 生活费 中奖
+收红包 收转账 保险理赔 退款 其他。
+`
 export const server = new McpServer({
   name: "smart-accounting-mcp",
   version: "1.0.0",
@@ -18,9 +31,9 @@ server.tool(
   {
     type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
     amount: z.number().positive().describe("交易金额，必须为正数"),
-    category: z.string().optional().describe("交易分类（可选），如：餐饮美食、交通出行、服装鞋帽、电子产品等。如未提供将自动分类"),
+    category: z.string().optional().describe(`交易分类(必须)，${categoryList}`),
     description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
-    tags: z.array(z.string()).optional().describe("交易标签（可选），例如 ['reimbursement'] 表示可报销")
+    tags: z.array(z.string()).optional().describe("交易标签(可选)，例如 ['reimbursement'] 表示可报销")
   },
   async ({ type, amount, category, description, tags }) => {
     console.log("处理记账请求", { type, amount, category, description, tags });
@@ -85,9 +98,9 @@ server.tool(
     transactions: z.array(z.object({
       type: z.enum(['income', 'expense']).describe("交易类型：income（收入）或 expense（支出）"),
       amount: z.number().positive().describe("交易金额，必须为正数"),
-      category: z.string().optional().describe("交易分类（可选），如：餐饮美食、交通出行、服装鞋帽、电子产品等。如未提供将自动分类"),
+      category: z.string().optional().describe(`交易分类(必须)，${categoryList}`),
       description: z.string().min(1).describe("交易描述，记录用户的原始输入内容"),
-      tags: z.array(z.string()).optional().describe("交易标签（可选），例如 ['reimbursement'] 表示可报销")
+      tags: z.array(z.string()).optional().describe("交易标签(可选)，例如 ['reimbursement'] 表示可报销")
     })).min(1).describe("交易记录数组，至少包含一笔交易")
   },
   async ({ transactions }) => {
