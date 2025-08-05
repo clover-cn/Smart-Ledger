@@ -1,2 +1,29 @@
 [
+  {
+    "id": "tx_mdyijx8n_g0nvdl",
+    "type": "expense",
+    "amount": 5,
+    "category": "水果零食",
+    "description": "今天买了三个雪糕5块钱",
+    "tags": [],
+    "timestamp": "2025-08-05 20:26:33"
+  },
+  {
+    "id": "tx_mdyin1ec_0yhsgr",
+    "type": "expense",
+    "amount": 5,
+    "category": "水果零食",
+    "description": "今天买了一个雪糕5元",
+    "tags": [],
+    "timestamp": "2025-08-05 20:28:58"
+  },
+  {
+    "id": "tx_mdyiwei9_e4658a",
+    "type": "expense",
+    "amount": 5,
+    "category": "水果零食",
+    "description": "吃了一个雪糕",
+    "tags": [],
+    "timestamp": "2025-08-05 20:36:15"
+  }
 ]
