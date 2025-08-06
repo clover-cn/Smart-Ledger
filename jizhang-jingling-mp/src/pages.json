@@ -11,6 +11,18 @@
 			"style": {
 				"navigationBarTitleText": "个人中心"
 			}
+		},
+		{
+			"path": "pages/transaction-detail/index",
+			"style": {
+				"navigationBarTitleText": "收支明细"
+			}
+		},
+		{
+			"path": "pages/edit-transaction/index",
+			"style": {
+				"navigationBarTitleText": "编辑账单"
+			}
 		}
 	],
 	"globalStyle": {

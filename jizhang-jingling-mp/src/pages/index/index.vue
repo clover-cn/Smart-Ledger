@@ -38,12 +38,12 @@
       </view>
     </view>
     <view class="consumeList">
-      <view class="title">
+      <view class="title" @click="goToDetail">
         <span>收支记录</span>
         <uv-icon name="arrow-right" color="#39342C" size="14"></uv-icon>
       </view>
       <view class="list">
-        <view class="item" v-for="(item, index) in transactionList" :key="index">
+        <view class="item" v-for="(item, index) in transactionList" :key="index" @click="editTransaction(item)">
           <view class="left">
             <view class="img">
               <image :src="item.icon" mode="scaleToFill" />
@@ -65,7 +65,6 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { I18nT } from "vue-i18n";
 // 交易记录
 let transactionList = ref([
   {
@@ -96,6 +95,20 @@ let transactionList = ref([
     icon: "../../static/images/gw.png",
   },
 ]);
+
+// 跳转到收支明细页面
+const goToDetail = () => {
+  uni.navigateTo({
+    url: "/pages/transaction-detail/index",
+  });
+};
+
+// 编辑交易记录
+const editTransaction = (item: any) => {
+  uni.navigateTo({
+    url: `/pages/edit-transaction/index?item=${JSON.stringify(item)}`,
+  });
+};
 </script>
 
 <style scoped lang="scss">
