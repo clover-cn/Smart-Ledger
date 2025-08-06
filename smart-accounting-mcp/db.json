@@ -32,7 +32,7 @@
     "amount": 1,
     "category": "水果零食",
     "description": "吃了一个雪糕",
-    "tags": [],
+    "tags": ["reimbursement"],
     "timestamp": "2025-08-06 15:40:37"
   }
 ]

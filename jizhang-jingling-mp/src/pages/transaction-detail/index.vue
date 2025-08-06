@@ -5,11 +5,11 @@
       <view class="stats">
         <view class="stat-item">
           <text class="stat-label">总收入</text>
-          <text class="stat-value income">+¥{{ totalIncome.toFixed(2) }}</text>
+          <text class="stat-value income">¥{{ totalIncome.toFixed(2) }}</text>
         </view>
         <view class="stat-item">
           <text class="stat-label">总支出</text>
-          <text class="stat-value expense">-¥{{ totalExpense.toFixed(2) }}</text>
+          <text class="stat-value expense">¥{{ totalExpense.toFixed(2) }}</text>
         </view>
         <view class="stat-item">
           <text class="stat-label">结余</text>
@@ -31,7 +31,10 @@
             <image :src="item.icon" mode="scaleToFill" />
           </view>
           <view class="info">
-            <view class="category">{{ item.category }}</view>
+            <view class="category-row">
+              <view class="category">{{ item.category }}</view>
+              <view v-if="item.tags && item.tags.includes('reimbursement')" class="reimbursement-tag">报销</view>
+            </view>
             <view class="date-time">{{ item.date }}</view>
             <view class="channel">{{ item.channel }}</view>
           </view>
@@ -40,11 +43,11 @@
           <view
             class="amount"
             :class="{
-              income: item.type === '收入',
-              expense: item.type === '支出',
+              income: item.type === 'income',
+              expense: item.type === 'expense',
             }"
           >
-            {{ item.type === "收入" ? "+" : "-" }}¥{{ item.amount.toFixed(2) }}
+            {{ item.type === "income" ? "+" : "-" }}¥{{ item.amount.toFixed(2) }}
           </view>
         </view>
       </view>
@@ -66,56 +69,62 @@ const currentTab = ref("all");
 const transactionList = ref([
   {
     id: 1,
-    type: "支出",
+    type: "expense",
     category: "餐饮",
     amount: 32.44,
     date: "08/26 12:30",
     channel: "微信",
+    tags: [],
     icon: "../../static/images/cy.png",
   },
   {
     id: 2,
-    type: "收入",
+    type: "income",
     category: "工资",
     amount: 5000.0,
     date: "08/25 09:00",
     channel: "支付宝",
+    tags: [],
     icon: "../../static/images/gz.png",
   },
   {
     id: 3,
-    type: "支出",
+    type: "expense",
     category: "购物",
     amount: 150.0,
     date: "08/24 15:45",
     channel: "信用卡",
+    tags: [],
     icon: "../../static/images/gw.png",
   },
   {
     id: 4,
-    type: "支出",
+    type: "expense",
     category: "交通",
     amount: 25.5,
     date: "08/24 08:20",
     channel: "支付宝",
+    tags: ["reimbursement"],
     icon: "../../static/images/yx.png",
   },
   {
     id: 5,
-    type: "收入",
+    type: "income",
     category: "红包",
     amount: 88.8,
     date: "08/23 20:15",
     channel: "微信",
+    tags: [],
     icon: "../../static/images/ry.png",
   },
   {
     id: 6,
-    type: "支出",
+    type: "expense",
     category: "娱乐",
     amount: 45.0,
     date: "08/23 19:30",
     channel: "支付宝",
+    tags: [],
     icon: "../../static/images/yl.png",
   },
 ]);
@@ -133,14 +142,18 @@ const filteredTransactions = computed(() => {
   return transactionList.value.filter((item) => item.type === currentTab.value);
 });
 
-// 计算总收入
+// 计算总收入（排除可报销项目）
 const totalIncome = computed(() => {
-  return transactionList.value.filter((item) => item.type === "收入").reduce((sum, item) => sum + item.amount, 0);
+  return transactionList.value
+    .filter((item) => item.type === "income" && (!item.tags || !item.tags.includes('reimbursement')))
+    .reduce((sum, item) => sum + item.amount, 0);
 });
 
-// 计算总支出
+// 计算总支出（排除可报销项目）
 const totalExpense = computed(() => {
-  return transactionList.value.filter((item) => item.type === "支出").reduce((sum, item) => sum + item.amount, 0);
+  return transactionList.value
+    .filter((item) => item.type === "expense" && (!item.tags || !item.tags.includes('reimbursement')))
+    .reduce((sum, item) => sum + item.amount, 0);
 });
 
 // 编辑交易记录
@@ -267,6 +280,28 @@ const editTransaction = (item: any) => {
 
         .info {
           flex: 1;
+
+          .category-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8rpx;
+
+            .category {
+              font-size: 32rpx;
+              font-weight: bold;
+              color: #333;
+            }
+
+            .reimbursement-tag {
+              margin-left: 16rpx;
+              padding: 4rpx 12rpx;
+              background-color: #e6f7ff;
+              color: #1890ff;
+              font-size: 20rpx;
+              border-radius: 8rpx;
+              border: 1rpx solid #91d5ff;
+            }
+          }
 
           .category {
             font-size: 32rpx;

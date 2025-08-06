@@ -49,12 +49,22 @@
               <image :src="item.icon" mode="scaleToFill" />
             </view>
             <view class="info">
-              <view class="name">{{ item.category }}</view>
+              <view class="category-row">
+                <view class="name">{{ item.category }}</view>
+                <view v-if="item.tags && item.tags.includes('reimbursement')" class="reimbursement-tag">报销</view>
+              </view>
               <view class="time">{{ item.date }}</view>
             </view>
           </view>
           <view class="right">
-            <view>￥{{ item.amount }}</view>
+            <view
+              class="amount"
+              :class="{
+                income: item.type === 'income',
+                expense: item.type === 'expense',
+              }"
+              >{{ item.type === "income" ? "+" : "-" }}￥{{ item.amount }}</view
+            >
             <view class="channel">{{ item.channel }}</view>
           </view>
         </view>
@@ -69,16 +79,17 @@ import { ref } from "vue";
 let transactionList = ref([
   {
     id: 1,
-    type: "支出",
+    type: "expense",
     category: "餐饮",
     amount: 32.44,
     date: "08/26 12:30",
     channel: "微信",
+    tags: ["reimbursement"],
     icon: "../../static/images/cy.png",
   },
   {
     id: 2,
-    type: "收入",
+    type: "income",
     category: "工资",
     amount: 5000.0,
     date: "08/25 09:00",
@@ -87,11 +98,12 @@ let transactionList = ref([
   },
   {
     id: 3,
-    type: "支出",
+    type: "expense",
     category: "购物",
     amount: 150.0,
     date: "08/24 15:45",
     channel: "信用卡",
+    tags: [],
     icon: "../../static/images/gw.png",
   },
 ]);
@@ -231,9 +243,22 @@ const editTransaction = (item: any) => {
             }
           }
           .info {
-            .name {
-              font-size: 32rpx;
-              font-weight: bold;
+            .category-row {
+              display: flex;
+              align-items: flex-start;
+              .reimbursement-tag {
+                margin-left: 16rpx;
+                padding: 4rpx 12rpx;
+                background-color: #e6f7ff;
+                color: #1890ff;
+                font-size: 20rpx;
+                border-radius: 8rpx;
+                border: 1rpx solid #91d5ff;
+              }
+              .name {
+                font-size: 32rpx;
+                font-weight: bold;
+              }
             }
             .time {
               margin-top: 10rpx;
@@ -250,6 +275,19 @@ const editTransaction = (item: any) => {
           .channel {
             font-weight: normal;
             color: #999;
+          }
+          .amount {
+            font-size: 32rpx;
+            font-weight: bold;
+            text-align: right;
+
+            &.income {
+              color: #52c41a;
+            }
+
+            &.expense {
+              color: #f5222d;
+            }
           }
         }
       }
