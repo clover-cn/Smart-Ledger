@@ -43,17 +43,19 @@
         <uv-icon name="arrow-right" color="#39342C" size="14"></uv-icon>
       </view>
       <view class="list">
-        <view class="item" v-for="(item, index) in 3" :key="index">
+        <view class="item" v-for="(item, index) in transactionList" :key="index">
           <view class="left">
-            <view class="img">图</view>
+            <view class="img">
+              <image :src="item.icon" mode="scaleToFill" />
+            </view>
             <view class="info">
-              <view class="name">午餐</view>
-              <view class="time">08/26 12:30</view>
+              <view class="name">{{ item.category }}</view>
+              <view class="time">{{ item.date }}</view>
             </view>
           </view>
           <view class="right">
-            <view>￥32.44</view>
-            <view class="channel">微信</view>
+            <view>￥{{ item.amount }}</view>
+            <view class="channel">{{ item.channel }}</view>
           </view>
         </view>
       </view>
@@ -63,6 +65,37 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { I18nT } from "vue-i18n";
+// 交易记录
+let transactionList = ref([
+  {
+    id: 1,
+    type: "支出",
+    category: "餐饮",
+    amount: 32.44,
+    date: "08/26 12:30",
+    channel: "微信",
+    icon: "../../static/images/cy.png",
+  },
+  {
+    id: 2,
+    type: "收入",
+    category: "工资",
+    amount: 5000.0,
+    date: "08/25 09:00",
+    channel: "支付宝",
+    icon: "../../static/images/gz.png",
+  },
+  {
+    id: 3,
+    type: "支出",
+    category: "购物",
+    amount: 150.0,
+    date: "08/24 15:45",
+    channel: "信用卡",
+    icon: "../../static/images/gw.png",
+  },
+]);
 </script>
 
 <style scoped lang="scss">
@@ -179,6 +212,10 @@ import { ref } from "vue";
             justify-content: center;
             border-radius: 25rpx;
             margin-right: 20rpx;
+            image {
+              width: 60rpx;
+              height: 60rpx;
+            }
           }
           .info {
             .name {

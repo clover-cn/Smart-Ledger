@@ -25,5 +25,14 @@
     "description": "吃了一个雪糕",
     "tags": [],
     "timestamp": "2025-08-05 20:36:15"
+  },
+  {
+    "id": "tx_mdzns291_9fwvfx",
+    "type": "expense",
+    "amount": 1,
+    "category": "水果零食",
+    "description": "吃了一个雪糕",
+    "tags": [],
+    "timestamp": "2025-08-06 15:40:37"
   }
 ]
