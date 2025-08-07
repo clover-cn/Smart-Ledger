@@ -1,4 +1,4 @@
 packages:
-  - 'jizhang-jingling-mp'
-  - 'jizhang-jingling-server'
-  # - 'smart-accounting-mcp'  # 排除此项目，让它使用原有的 npm 管理
+  # - 'jizhang-jingling-mp'      # 排除，使用原有包管理器
+  # - 'jizhang-jingling-server'     # 管理服务端项目
+  # - 'smart-accounting-mcp'      # 排除此项目，让它使用原有的 npm 管理
