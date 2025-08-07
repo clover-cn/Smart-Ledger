@@ -283,7 +283,7 @@ const editTransaction = (item: any) => {
 
           .category-row {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 8rpx;
 
             .category {

@@ -1,18 +1,42 @@
 import { TransactionData, Transaction } from '../types/transaction.js';
 import { StorageService } from './storage-service.js';
+import { ApiStorageService } from './api-storage-service.js';
 import { generateTransactionId, isValidAmount } from '../utils/id-generator.js';
 import { getSmartCategory } from '../utils/smart-categorizer.js';
 import { formatTimestamp } from '../utils/Common.js';
 import { parseRelativeDate } from '../utils/date-parser.js';
+import { config } from '../config.js';
+
+/**
+ * 存储服务接口，支持文件存储和API存储
+ */
+interface IStorageService {
+  save(transaction: Transaction): Promise<void>;
+  saveBatch(transactions: Transaction[]): Promise<void>;
+  getAll(): Promise<Transaction[]>;
+  clear(): Promise<void>;
+}
+
 /**
  * TransactionService - 交易业务逻辑服务
  * 负责处理交易数据的验证、转换和存储
  */
 export class TransactionService {
-  private storageService: StorageService;
+  private storageService: IStorageService;
 
-  constructor(storageService?: StorageService) {
-    this.storageService = storageService || new StorageService();
+  constructor(storageService?: IStorageService) {
+    if (storageService) {
+      this.storageService = storageService;
+    } else {
+      // 根据配置选择存储服务
+      if (config.storage.mode === 'api') {
+        console.log('使用API存储模式');
+        this.storageService = new ApiStorageService();
+      } else {
+        console.log('使用文件存储模式');
+        this.storageService = new StorageService(config.storage.dbPath);
+      }
+    }
   }
 
   /**

@@ -38,6 +38,16 @@ const projects: ProjectConfig[] = [
       '构建': 'build',
       '启动': 'start'
     }
+  },{
+    name: 'jizhang-jingling-server',
+    displayName: '🖥️ 记账精灵服务器',
+    path: 'jizhang-jingling-server',
+    packageManager: 'auto', // 自动检测包管理器
+    commands: {
+      '开发模式': 'dev',
+      '构建': 'build',
+      '启动': 'start'
+    }
   }
 ];
 

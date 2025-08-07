@@ -245,7 +245,7 @@ const editTransaction = (item: any) => {
           .info {
             .category-row {
               display: flex;
-              align-items: flex-start;
+              align-items: center;
               .reimbursement-tag {
                 margin-left: 16rpx;
                 padding: 4rpx 12rpx;
