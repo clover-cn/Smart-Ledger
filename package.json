@@ -1,0 +1,24 @@
+{
+  "name": "smart-ledger-monorepo",
+  "version": "1.0.0",
+  "description": "智能记账系统 - 包含小程序、服务端和MCP服务器",
+  "private": true,
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "build": "tsx scripts/build.ts"
+  },
+  "workspaces": [
+    "jizhang-jingling-mp",
+    "jizhang-jingling-server",
+    "smart-accounting-mcp"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.19.9",
+    "tsx": "^4.20.3"
+  },
+  "packageManager": "pnpm@8.0.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  }
+}
