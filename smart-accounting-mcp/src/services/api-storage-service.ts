@@ -1,5 +1,6 @@
 import { Transaction } from '../types/transaction.js';
 import { config } from '../config.js';
+import { CredentialManager } from './credential-manager.js';
 
 /**
  * ApiStorageService - 基于API的数据存储服务
@@ -7,34 +8,41 @@ import { config } from '../config.js';
  */
 export class ApiStorageService {
   private baseUrl: string;
-  private token: string;
-  private userId: string;
   private timeout: number;
+  private credentialManager: CredentialManager;
 
   constructor() {
     this.baseUrl = config.api.baseUrl;
-    this.token = config.api.token;
-    this.userId = config.api.userId;
     this.timeout = config.api.timeout;
+    this.credentialManager = CredentialManager.getInstance();
 
     if (!this.baseUrl) {
       throw new Error('API_BASE_URL 未配置');
     }
-    if (!this.token) {
-      throw new Error('API_TOKEN 未配置，请先登录获取token');
+  }
+
+  /**
+   * 获取当前用户凭据
+   */
+  private getCurrentCredentials(): { token: string; userId: string } {
+    const token = this.credentialManager.getApiToken();
+    const userId = this.credentialManager.getUserId();
+
+    if (!token || !userId) {
+      throw new Error('用户凭据未配置，请先使用 setUserCredentials 工具设置用户ID和API令牌');
     }
-    if (!this.userId) {
-      throw new Error('USER_ID 未配置，请先登录获取用户ID');
-    }
+
+    return { token, userId };
   }
 
   /**
    * 创建请求headers
    */
   private getHeaders(): Record<string, string> {
+    const { token } = this.getCurrentCredentials();
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.token}`
+      'Authorization': `Bearer ${token}`
     };
   }
 
@@ -163,21 +171,41 @@ export class ApiStorageService {
    */
   async getAll(): Promise<Transaction[]> {
     try {
-      const url = `${this.baseUrl}/transactions?limit=1000`; // 获取最近1000条记录
-      
-      console.log(`正在从API获取交易记录: ${url}`);
-      const response = await this.request(url);
+      // 服务器限制每次最多获取100条记录，需要分页获取
+      let allTransactions: Transaction[] = [];
+      let page = 1;
+      const limit = 100; // 服务器允许的最大限制
+      let hasMore = true;
 
-      if (!response.success) {
-        throw new Error(response.error || '获取数据失败');
+      while (hasMore) {
+        const url = `${this.baseUrl}/transactions?page=${page}&limit=${limit}`;
+        
+        console.log(`正在从API获取交易记录 (第${page}页): ${url}`);
+        const response = await this.request(url);
+
+        if (!response.success) {
+          throw new Error(response.error || '获取数据失败');
+        }
+
+        const transactions = response.data.map((apiTx: any) =>
+          this.convertFromApiFormat(apiTx)
+        );
+
+        allTransactions = allTransactions.concat(transactions);
+        
+        // 如果返回的记录数少于限制数，说明已经是最后一页
+        hasMore = transactions.length === limit;
+        page++;
+
+        // 为了防止无限循环，设置最大页数限制
+        if (page > 100) { // 最多获取10000条记录
+          console.warn('达到最大页数限制，停止获取更多记录');
+          break;
+        }
       }
 
-      const transactions = response.data.map((apiTx: any) => 
-        this.convertFromApiFormat(apiTx)
-      );
-
-      console.log(`从API获取到 ${transactions.length} 笔交易记录`);
-      return transactions;
+      console.log(`从API获取到 ${allTransactions.length} 笔交易记录`);
+      return allTransactions;
     } catch (error) {
       console.error('从API读取交易记录时发生错误:', error);
       throw new Error(`无法读取交易记录: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -224,5 +252,35 @@ export class ApiStorageService {
       console.error('获取用户信息失败:', error);
       throw error;
     }
+  }
+
+  /**
+   * 设置用户凭据
+   * @param userId 用户ID
+   * @param apiToken API访问令牌
+   */
+  setUserCredentials(userId: string, apiToken: string): void {
+    this.credentialManager.setCredentials(userId, apiToken);
+  }
+
+  /**
+   * 检查是否已配置用户凭据
+   */
+  hasCredentials(): boolean {
+    return this.credentialManager.hasCredentials();
+  }
+
+  /**
+   * 获取凭据状态
+   */
+  getCredentialStatus(): any {
+    return this.credentialManager.getCredentialStatus();
+  }
+
+  /**
+   * 清空用户凭据
+   */
+  clearCredentials(): void {
+    this.credentialManager.clearCredentials();
   }
 }

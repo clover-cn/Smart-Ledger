@@ -1,9 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { TransactionService } from "./services/transaction-service.js";
+import { CredentialManager } from "./services/credential-manager.js";
+import { ApiStorageService } from "./services/api-storage-service.js";
 
 // 创建智能记账服务实例
 const transactionService = new TransactionService();
+const credentialManager = CredentialManager.getInstance();
 const categoryList = `请根据交易内容选择合适的分类，没有合适的分类请使用“其他”：
 支出分类：
 餐饮 休闲娱乐 购物 穿搭美容 水果零食
@@ -440,6 +443,322 @@ server.tool(
         }
       ]
     };
+  }
+);
+
+// 设置用户凭据工具 - 让用户动态配置自己的用户ID和访问令牌
+server.tool(
+  "setUserCredentials",
+  "设置用户登录凭据 - 配置用户ID和API访问令牌，使MCP服务器能够访问您的个人账户数据。每个用户都需要设置自己的凭据才能使用记账功能。",
+  {
+    userId: z.string().min(1).describe("用户ID，从记账应用获取"),
+    apiToken: z.string().min(10).describe("API访问令牌，从记账应用登录后获取")
+  },
+  async ({ userId, apiToken }) => {
+    console.log("设置用户凭据", { userId: userId.substring(0, 8) + "..." });
+    
+    try {
+      // 验证凭据格式
+      const validation = credentialManager.validateCredentialsFormat(userId, apiToken);
+      if (!validation.valid) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                message: "凭据格式验证失败",
+                errors: validation.errors
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      // 设置凭据
+      credentialManager.setCredentials(userId, apiToken);
+      
+      // 验证凭据是否有效
+      try {
+        const apiStorage = new ApiStorageService();
+        const isValid = await apiStorage.validateConnection();
+        
+        if (!isValid) {
+          credentialManager.clearCredentials();
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  success: false,
+                  message: "凭据验证失败，请检查用户ID和API令牌是否正确"
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: true,
+                message: "用户凭据设置成功并已验证",
+                userId: userId,
+                status: "已配置并验证"
+              }, null, 2)
+            }
+          ]
+        };
+      } catch (verifyError) {
+        credentialManager.clearCredentials();
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                message: "凭据设置失败",
+                error: verifyError instanceof Error ? verifyError.message : "API连接验证失败"
+              }, null, 2)
+            }
+          ]
+        };
+      }
+    } catch (error: any) {
+      console.error("设置用户凭据失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "设置用户凭据失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
+// 验证用户凭据工具
+server.tool(
+  "verifyUserCredentials",
+  "验证当前用户凭据 - 检查已设置的用户ID和API令牌是否有效，确保可以正常访问记账服务",
+  {},
+  async () => {
+    console.log("验证用户凭据");
+    
+    try {
+      if (!credentialManager.hasCredentials()) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                message: "用户凭据未设置，请先使用 setUserCredentials 工具设置",
+                configured: false
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      const apiStorage = new ApiStorageService();
+      const isValid = await apiStorage.validateConnection();
+      
+      if (!isValid) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                message: "凭据验证失败，请检查用户ID和API令牌是否正确",
+                configured: true,
+                valid: false
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      const status = credentialManager.getCredentialStatus();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: "用户凭据验证成功",
+              configured: true,
+              valid: true,
+              userId: status.userId
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("验证用户凭据失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "验证用户凭据时发生错误"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
+// 获取用户信息工具
+server.tool(
+  "getUserProfile",
+  "获取当前用户个人信息 - 显示已登录用户的基本信息和账户状态",
+  {},
+  async () => {
+    console.log("获取用户个人信息");
+    
+    try {
+      if (!credentialManager.hasCredentials()) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                success: false,
+                message: "用户凭据未设置，请先使用 setUserCredentials 工具设置",
+                configured: false
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      const apiStorage = new ApiStorageService();
+      const userInfo = await apiStorage.getUserInfo();
+      const credentialStatus = credentialManager.getCredentialStatus();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: "获取用户信息成功",
+              userInfo: userInfo,
+              credentialStatus: credentialStatus
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("获取用户信息失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "获取用户信息失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
+// 获取凭据状态工具
+server.tool(
+  "getCredentialStatus",
+  "获取用户凭据配置状态 - 显示当前是否已配置用户凭据以及配置状态信息",
+  {},
+  async () => {
+    console.log("获取凭据状态");
+    
+    try {
+      const status = credentialManager.getCredentialStatus();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              credentialStatus: status,
+              message: status.isConfigured
+                ? `用户 ${status.userId} 的凭据已配置`
+                : "用户凭据未配置，请使用 setUserCredentials 工具设置"
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("获取凭据状态失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "获取凭据状态失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+);
+
+// 清空用户凭据工具
+server.tool(
+  "clearUserCredentials",
+  "清空用户凭据 - 删除已设置的用户ID和API令牌，清空登录状态",
+  {},
+  async () => {
+    console.log("清空用户凭据");
+    
+    try {
+      credentialManager.clearCredentials();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              message: "用户凭据已清空，如需使用记账功能请重新设置凭据"
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      console.error("清空用户凭据失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              message: "清空用户凭据失败"
+            }, null, 2)
+          }
+        ]
+      };
+    }
   }
 );
 

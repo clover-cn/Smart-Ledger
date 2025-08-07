@@ -9,8 +9,7 @@ export const config = {
   },
   api: {
     baseUrl: process.env.API_BASE_URL || 'http://localhost:3000/api',
-    token: process.env.API_TOKEN || '',
-    userId: process.env.USER_ID || '',
+    // 用户凭据现在通过工具动态设置，不再从环境变量读取
     timeout: parseInt(process.env.API_TIMEOUT || '10000')
   },
   storage: {
