@@ -7,16 +7,11 @@
     "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts"
   },
-  "workspaces": [
-    "jizhang-jingling-mp",
-    "jizhang-jingling-server",
-    "smart-accounting-mcp"
-  ],
   "devDependencies": {
     "@types/node": "^20.19.9",
     "tsx": "^4.20.3"
   },
-  "packageManager": "pnpm@8.0.0",
+  "packageManager": "pnpm@10.12.4",
   "engines": {
     "node": ">=18",
     "pnpm": ">=8"
