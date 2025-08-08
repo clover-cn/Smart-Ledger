@@ -98,6 +98,32 @@ export class ApiStorageService {
    * 将API响应转换为Transaction格式
    */
   private convertFromApiFormat(apiTransaction: any): Transaction {
+    // 处理时间戳，确保格式正确
+    let timestamp: string;
+    try {
+      // 优先使用 transaction_date，如果没有则使用 created_at
+      if (apiTransaction.transaction_date) {
+        // 如果有具体的交易日期，使用它
+        const date = new Date(apiTransaction.transaction_date);
+        if (isNaN(date.getTime())) {
+          // 如果 transaction_date 无效，尝试使用 created_at
+          const createdDate = new Date(apiTransaction.created_at);
+          timestamp = isNaN(createdDate.getTime()) ? new Date().toISOString() : createdDate.toISOString();
+        } else {
+          timestamp = date.toISOString();
+        }
+      } else if (apiTransaction.created_at) {
+        const createdDate = new Date(apiTransaction.created_at);
+        timestamp = isNaN(createdDate.getTime()) ? new Date().toISOString() : createdDate.toISOString();
+      } else {
+        // 如果都没有，使用当前时间
+        timestamp = new Date().toISOString();
+      }
+    } catch (error) {
+      console.warn('时间戳解析失败，使用当前时间:', error);
+      timestamp = new Date().toISOString();
+    }
+
     return {
       id: apiTransaction.id,
       type: apiTransaction.type,
@@ -105,7 +131,7 @@ export class ApiStorageService {
       category: apiTransaction.category,
       description: apiTransaction.description || '',
       tags: apiTransaction.tags || [],
-      timestamp: `${apiTransaction.transaction_date} ${new Date(apiTransaction.created_at).toTimeString().split(' ')[0]}`
+      timestamp
     };
   }
 

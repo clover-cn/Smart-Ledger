@@ -267,14 +267,23 @@ export class TransactionService {
     try {
       const allTransactions = await this.getAllTransactions();
       const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-      
+
       // 过滤时间窗口内的交易
       const recentTransactions = allTransactions.filter(tx => {
-        // 将字符串时间戳转换为 Date 对象进行比较
-        const txDate = new Date(tx.timestamp);
-        return txDate >= cutoffTime;
+        try {
+          // 将字符串时间戳转换为 Date 对象进行比较
+          const txDate = new Date(tx.timestamp);
+          if (isNaN(txDate.getTime())) {
+            console.warn(`交易 ${tx.id} 的时间戳无效: ${tx.timestamp}`);
+            return false; // 无效时间戳的交易不参与比较
+          }
+          return txDate >= cutoffTime;
+        } catch (error) {
+          console.warn(`处理交易 ${tx.id} 时间戳时出错:`, error);
+          return false;
+        }
       });
-      
+
       // 查找相似交易
       const similarTransactions = recentTransactions
         .map(tx => ({
