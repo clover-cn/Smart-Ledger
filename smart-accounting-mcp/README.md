@@ -1,126 +1,164 @@
-# 智能记账MCP服务器
+# Smart Accounting MCP
 
-这是一个基于MCP（Model Context Protocol）的智能记账服务器，为大语言模型提供记账功能。
+智能记账 MCP (Model Context Protocol) 服务器，提供专业的财务记录和管理功能。
+
+
+**支持通过URL参数进行用户认证**
+
+### MCP配置方式
+
+```json
+{
+  "smart-accounting-mcp": {
+    "url": "http://127.0.0.1:8083/sse?userId=YOUR_USER_ID&apiToken=YOUR_API_TOKEN",
+    "transport": "sse"
+  }
+}
+```
+
+### 优势
+
+- ✅ **服务重启后凭据不会失效** - 认证信息保存在URL中
+- ✅ **多用户支持** - 每个用户使用自己的URL配置
+- ✅ **一次配置，永久有效** - 无需重复设置凭据
+- ✅ **更安全的会话管理** - 每个连接独立管理
 
 ## 功能特性
 
-- 🤖 **MCP协议支持**：通过MCP协议与Claude等大语言模型集成
-- 💰 **交易记录管理**：记录收入和支出交易
-- 🏷️ **智能分类**：自动分类交易类型
-- 📊 **数据统计**：提供交易统计和汇总功能
-- 🔄 **多种存储模式**：支持本地JSON文件和远程API存储
-- 🎯 **相对时间解析**：支持"昨天"、"上周"等时间描述
+- 📊 智能记账：支持收入和支出记录
+- 🔍 重复检测：自动检测相似交易，避免重复记录
+- 📈 统计分析：提供财务汇总和统计信息
+- 🏷️ 分类管理：支持详细的收支分类
+- 🔄 批量操作：支持批量记录多笔交易
+- 🌐 SSE支持：基于Server-Sent Events的实时通信
+- 👥 多用户支持：支持多个用户同时使用
+- 🔐 URL认证：通过URL参数进行用户认证
 
-## 存储模式
-
-### API存储模式（推荐）
-- 将数据存储到远程API服务器
-- 支持多用户数据隔离
-- 提供云端数据同步
-- 需要配置用户认证
-
-### 文件存储模式
-- 将数据存储到本地JSON文件
-- 适合单机使用
-- 无需网络连接
-
-## 快速开始
+## 安装和运行
 
 ### 1. 安装依赖
 
 ```bash
-cd smart-accounting-mcp
 npm install
 ```
 
-### 2. 配置环境变量
-
-复制 `.env.example` 到 `.env`：
+### 2. 编译TypeScript
 
 ```bash
-cp .env.example .env
-```
-
-编辑 `.env` 文件配置：
-
-#### API存储模式配置
-```env
-STORAGE_MODE=api
-API_BASE_URL=http://localhost:3000/api
-API_TOKEN=你的JWT令牌
-USER_ID=你的用户ID
-```
-
-#### 文件存储模式配置
-```env
-STORAGE_MODE=file
-DB_PATH=db.json
-```
-
-### 3. 获取用户认证信息（API模式）
-
-如果使用API存储模式，需要先获取认证信息：
-
-1. 启动后台服务器：
-   ```bash
-   cd jizhang-jingling-server
-   npm run dev
-   ```
-
-2. 在小程序中注册/登录账户
-3. 复制用户ID和访问令牌到 `.env` 文件
-
-### 4. 启动MCP服务器
-
-```bash
-# 开发模式
-npm run dev
-
-# 生产模式
 npm run build
+```
+
+### 3. 启动服务器
+
+```bash
 npm start
 ```
 
-## MCP工具
+服务器将在 `http://localhost:8083` 启动。
 
-### add_transaction
-记录一笔交易
+### 4. 开发模式
 
-**参数：**
-- `type` (required): 交易类型 ("income" | "expense")
-- `amount` (required): 金额 (number)
-- `description` (required): 描述 (string)
-- `category` (optional): 分类 (string)
-- `tags` (optional): 标签数组 (string[])
+```bash
+npm run dev
+```
 
-**示例：**
+## MCP 客户端配置
+
+### MCP配置方式（URL认证）
+
 ```json
 {
-  "type": "expense",
-  "amount": 50,
-  "description": "午餐费用",
-  "category": "餐饮",
-  "tags": ["日常开销"]
+  "smart-accounting-mcp": {
+    "url": "http://127.0.0.1:8083/sse?userId=YOUR_USER_ID&apiToken=YOUR_API_TOKEN",
+    "transport": "sse"
+  }
 }
 ```
 
-### add_transactions_batch
-批量记录多笔交易
+**请将 `YOUR_USER_ID` 和 `YOUR_API_TOKEN` 替换为你的实际用户ID和API令牌。**
 
-**参数：**
-- `transactions` (required): 交易数组
 
-### get_all_transactions
-获取所有交易记录
 
-### get_today_transactions
-获取今天的交易记录
+## 可用工具
 
-### get_transaction_summary
-获取交易统计汇总
+### 核心记账功能
 
-### check_duplicate_transaction
-检查是否有重复的交易记录
+1. **checkDuplicateTransaction** - 检查重复交易
+2. **recordTransaction** - 记录单笔交易
+3. **recordTransactionBatch** - 批量记录交易
+
+### 查询功能
+
+4. **getTodayTransactions** - 获取当天交易记录
+5. **getAllTransactions** - 获取所有交易记录
+6. **getTransactionSummary** - 获取交易统计汇总
+
+### 系统信息
+
+7. **getAccountingLimitations** - 获取系统功能限制说明
+8. **updateTransaction** - 修改交易记录（暂不支持，提示用户使用网页版）
+9. **deleteTransaction** - 删除交易记录（暂不支持，提示用户使用网页版）
+
+## 使用说明
+
+### 使用方式（URL认证）
+
+1. **配置MCP客户端**：
+   ```json
+   {
+     "smart-accounting-mcp": {
+       "url": "http://127.0.0.1:8083/sse?userId=YOUR_USER_ID&apiToken=YOUR_API_TOKEN",
+       "transport": "sse"
+     }
+   }
+   ```
+
+2. **直接开始记账**：
+   - 无需设置凭据，直接使用记账功能
+   - 服务重启后无需重新配置
+   - 每个用户使用独立的URL配置
+
+### 记录交易
+
+1. **检查重复**（推荐）：
+   ```
+   先使用 checkDuplicateTransaction 检查是否有相似交易
+   ```
+
+2. **记录交易**：
+   ```
+   使用 recordTransaction 记录单笔交易
+   或使用 recordTransactionBatch 批量记录
+   ```
+
+### 查看记录
+
+- 查看今日记录：`getTodayTransactions`
+- 查看所有记录：`getAllTransactions`
+- 查看统计汇总：`getTransactionSummary`
+
+## 交易分类
+
+### 支出分类
+餐饮、休闲娱乐、购物、穿搭美容、水果零食、交通、生活日用、人情社交、宠物、养娃、运动、生活服务、买菜、住房、爱车、发红包、转账、学习教育、网络虚拟、烟酒、医疗保健、金融保险、家居家电、酒店旅行、公益、互助保障、其他
+
+### 收入分类
+工资、兼职、投资理财、人情社交、奖金补贴、报销、生意、卖二手、生活费、中奖、收红包、收转账、保险理赔、退款、其他
+
+## 多用户支持
+
+- 每个用户使用独立的URL配置
+- 支持多个用户同时连接和使用
+- 会话自动管理，1小时未活动自动清理
+- 连接断开时自动清理会话数据
+
+## 注意事项
+
+- ✅ **推荐使用URL认证方式** - 更稳定，无需重复设置
+- ⚠️ 修改和删除功能暂时不支持，需要在网页版中操作
+- ✅ **服务器重启后URL认证方式无需重新配置**
+- 💡 建议在记录前先检查重复交易
+- 🏷️ 支持可报销标签：在tags中添加 'reimbursement' 或 '可报销'
 
 ## 智能功能
 
@@ -136,27 +174,6 @@ npm start
 - "昨天买了咖啡" → 自动设置为昨天的时间
 - "上周看电影" → 自动设置为上周的时间
 - "前天的午餐" → 自动设置为前天的时间
-
-## 在Claude Desktop中使用
-
-在Claude Desktop的配置文件中添加：
-
-```json
-{
-  "mcpServers": {
-    "smart-accounting": {
-      "command": "node",
-      "args": ["path/to/smart-accounting-mcp/dist/mcp-sse-server.js"],
-      "env": {
-        "STORAGE_MODE": "api",
-        "API_BASE_URL": "http://localhost:3000/api",
-        "API_TOKEN": "your_jwt_token",
-        "USER_ID": "your_user_id"
-      }
-    }
-  }
-}
-```
 
 ## 开发指南
 

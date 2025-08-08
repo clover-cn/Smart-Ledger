@@ -1,6 +1,6 @@
-import { Transaction } from '../types/transaction.js';
-import { config } from '../config.js';
-import { CredentialManager } from './credential-manager.js';
+import { Transaction } from "../types/transaction.js";
+import { config } from "../config.js";
+import { CredentialManager } from "./credential-manager.js";
 
 /**
  * ApiStorageService - 基于API的数据存储服务
@@ -17,7 +17,7 @@ export class ApiStorageService {
     this.credentialManager = CredentialManager.getInstance();
 
     if (!this.baseUrl) {
-      throw new Error('API_BASE_URL 未配置');
+      throw new Error("API_BASE_URL 未配置");
     }
   }
 
@@ -29,7 +29,7 @@ export class ApiStorageService {
     const userId = this.credentialManager.getUserId();
 
     if (!token || !userId) {
-      throw new Error('用户凭据未配置，请先使用 setUserCredentials 工具设置用户ID和API令牌');
+      throw new Error("用户凭据未配置，请先使用 setUserCredentials 工具设置用户ID和API令牌");
     }
 
     return { token, userId };
@@ -41,8 +41,8 @@ export class ApiStorageService {
   private getHeaders(): Record<string, string> {
     const { token } = this.getCurrentCredentials();
     return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     };
   }
 
@@ -58,22 +58,22 @@ export class ApiStorageService {
         ...options,
         headers: {
           ...this.getHeaders(),
-          ...options.headers
+          ...options.headers,
         },
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+        throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorData.error || "Unknown error"}`);
       }
 
       return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         throw new Error(`API请求超时 (${this.timeout}ms)`);
       }
       throw error;
@@ -90,7 +90,7 @@ export class ApiStorageService {
       category: transaction.category,
       description: transaction.description,
       tags: transaction.tags,
-      transaction_date: transaction.timestamp.split(' ')[0] // 从 "YYYY-MM-DD HH:mm:ss" 提取日期部分
+      transaction_date: transaction.timestamp.split(" ")[0], // 从 "YYYY-MM-DD HH:mm:ss" 提取日期部分
     };
   }
 
@@ -120,7 +120,7 @@ export class ApiStorageService {
         timestamp = new Date().toISOString();
       }
     } catch (error) {
-      console.warn('时间戳解析失败，使用当前时间:', error);
+      console.warn("时间戳解析失败，使用当前时间:", error);
       timestamp = new Date().toISOString();
     }
 
@@ -129,9 +129,9 @@ export class ApiStorageService {
       type: apiTransaction.type,
       amount: apiTransaction.amount,
       category: apiTransaction.category,
-      description: apiTransaction.description || '',
+      description: apiTransaction.description || "",
       tags: apiTransaction.tags || [],
-      timestamp
+      timestamp,
     };
   }
 
@@ -143,21 +143,21 @@ export class ApiStorageService {
     try {
       const apiData = this.convertToApiFormat(transaction);
       const url = `${this.baseUrl}/transactions`;
-      
+
       console.log(`正在保存交易记录到API: ${url}`);
       const response = await this.request(url, {
-        method: 'POST',
-        body: JSON.stringify(apiData)
+        method: "POST",
+        body: JSON.stringify(apiData),
       });
 
       if (!response.success) {
-        throw new Error(response.error || '保存失败');
+        throw new Error(response.error || "保存失败");
       }
 
       console.log(`交易记录已保存到API: ${transaction.id}`);
     } catch (error) {
-      console.error('API保存交易记录时发生错误:', error);
-      throw new Error(`无法保存交易记录: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error("API保存交易记录时发生错误:", error);
+      throw new Error(`无法保存交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
     }
   }
 
@@ -167,27 +167,27 @@ export class ApiStorageService {
    */
   async saveBatch(transactions: Transaction[]): Promise<void> {
     if (transactions.length === 0) return;
-    
+
     try {
-      const apiDataList = transactions.map(tx => this.convertToApiFormat(tx));
+      const apiDataList = transactions.map((tx) => this.convertToApiFormat(tx));
       const url = `${this.baseUrl}/transactions/batch`;
-      
+
       console.log(`正在批量保存 ${transactions.length} 笔交易记录到API`);
       const response = await this.request(url, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          transactions: apiDataList
-        })
+          transactions: apiDataList,
+        }),
       });
 
       if (!response.success) {
-        throw new Error(response.error || '批量保存失败');
+        throw new Error(response.error || "批量保存失败");
       }
 
       console.log(`批量保存 ${transactions.length} 笔交易记录成功`);
     } catch (error) {
-      console.error('API批量保存交易记录时发生错误:', error);
-      throw new Error(`无法批量保存交易记录: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error("API批量保存交易记录时发生错误:", error);
+      throw new Error(`无法批量保存交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
     }
   }
 
@@ -205,27 +205,26 @@ export class ApiStorageService {
 
       while (hasMore) {
         const url = `${this.baseUrl}/transactions?page=${page}&limit=${limit}`;
-        
+
         console.log(`正在从API获取交易记录 (第${page}页): ${url}`);
         const response = await this.request(url);
 
         if (!response.success) {
-          throw new Error(response.error || '获取数据失败');
+          throw new Error(response.error || "获取数据失败");
         }
 
-        const transactions = response.data.map((apiTx: any) =>
-          this.convertFromApiFormat(apiTx)
-        );
+        const transactions = response.data.map((apiTx: any) => this.convertFromApiFormat(apiTx));
 
         allTransactions = allTransactions.concat(transactions);
-        
+
         // 如果返回的记录数少于限制数，说明已经是最后一页
         hasMore = transactions.length === limit;
         page++;
 
         // 为了防止无限循环，设置最大页数限制
-        if (page > 100) { // 最多获取10000条记录
-          console.warn('达到最大页数限制，停止获取更多记录');
+        if (page > 100) {
+          // 最多获取10000条记录
+          console.warn("达到最大页数限制，停止获取更多记录");
           break;
         }
       }
@@ -233,8 +232,8 @@ export class ApiStorageService {
       console.log(`从API获取到 ${allTransactions.length} 笔交易记录`);
       return allTransactions;
     } catch (error) {
-      console.error('从API读取交易记录时发生错误:', error);
-      throw new Error(`无法读取交易记录: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error("从API读取交易记录时发生错误:", error);
+      throw new Error(`无法读取交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
     }
   }
 
@@ -242,8 +241,8 @@ export class ApiStorageService {
    * 清空所有交易记录（仅用于测试，实际API可能不提供此功能）
    */
   async clear(): Promise<void> {
-    console.warn('API模式下不支持清空所有交易记录');
-    throw new Error('API模式下不支持清空操作');
+    console.warn("API模式下不支持清空所有交易记录");
+    throw new Error("API模式下不支持清空操作");
   }
 
   /**
@@ -253,10 +252,10 @@ export class ApiStorageService {
     try {
       const url = `${this.baseUrl}/auth/verify`;
       const response = await this.request(url);
-      
+
       return response.success && response.data?.valid;
     } catch (error) {
-      console.error('API连接验证失败:', error);
+      console.error("API连接验证失败:", error);
       return false;
     }
   }
@@ -268,45 +267,15 @@ export class ApiStorageService {
     try {
       const url = `${this.baseUrl}/auth/profile`;
       const response = await this.request(url);
-      
+
       if (!response.success) {
-        throw new Error(response.error || '获取用户信息失败');
+        throw new Error(response.error || "获取用户信息失败");
       }
-      
+
       return response.data;
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+      console.error("获取用户信息失败:", error);
       throw error;
     }
-  }
-
-  /**
-   * 设置用户凭据
-   * @param userId 用户ID
-   * @param apiToken API访问令牌
-   */
-  setUserCredentials(userId: string, apiToken: string): void {
-    this.credentialManager.setCredentials(userId, apiToken);
-  }
-
-  /**
-   * 检查是否已配置用户凭据
-   */
-  hasCredentials(): boolean {
-    return this.credentialManager.hasCredentials();
-  }
-
-  /**
-   * 获取凭据状态
-   */
-  getCredentialStatus(): any {
-    return this.credentialManager.getCredentialStatus();
-  }
-
-  /**
-   * 清空用户凭据
-   */
-  clearCredentials(): void {
-    this.credentialManager.clearCredentials();
   }
 }
