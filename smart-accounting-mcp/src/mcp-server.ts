@@ -307,6 +307,78 @@ server.tool("getTodayTransactions", "获取当天的财务交易记录 - 只返�
   }
 });
 
+// 获取指定日期范围交易记录工具
+server.tool(
+  "getTransactionsByDateRange",
+  "根据日期范围获取财务交易记录 - 支持自定义时间范围查询，相比获取全部记录更高效，减少服务器压力和网络传输",
+  {
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "开始日期格式必须是 YYYY-MM-DD")
+      .describe("开始日期，格式：YYYY-MM-DD"),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "结束日期格式必须是 YYYY-MM-DD")
+      .optional()
+      .describe("结束日期，格式：YYYY-MM-DD，可选，默认等于开始日期"),
+    page: z.number().int().min(1).default(1).optional().describe("页码，从1开始，默认第1页"),
+    limit: z.number().int().min(1).max(100).default(20).optional().describe("每页记录数，最大100条，默认20条"),
+  },
+  async ({ startDate, endDate, page = 1, limit = 20 }) => {
+    console.log("获取日期范围交易记录", { startDate, endDate, page, limit });
+
+    try {
+      const transactions = await transactionService.getTransactionsByDateRange(startDate, endDate, page, limit);
+
+      const actualEndDate = endDate || startDate;
+      const isToday = startDate === new Date().toISOString().split("T")[0] && actualEndDate === startDate;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                dateRange: `${startDate} ~ ${actualEndDate}`,
+                isToday: isToday,
+                page: page,
+                limit: limit,
+                count: transactions.length,
+                transactions: transactions.map((t) => ({
+                  ...t,
+                  timestamp: t.timestamp,
+                })),
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } catch (error: any) {
+      console.error("获取日期范围交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: error.message,
+                message: "获取日期范围交易记录失败",
+                dateRange: `${startDate} ~ ${endDate || startDate}`,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  }
+);
+
 // 获取所有交易记录工具
 server.tool("getAllTransactions", "获取所有已记录的财务交易记录 - 用于查看历史收支明细", {}, async () => {
   console.log("获取所有交易记录");

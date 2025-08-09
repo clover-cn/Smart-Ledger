@@ -238,6 +238,60 @@ export class ApiStorageService {
   }
 
   /**
+   * 根据日期范围获取交易记录
+   * @param startDate 开始日期 (YYYY-MM-DD 格式)
+   * @param endDate 结束日期 (YYYY-MM-DD 格式，可选，默认等于 startDate)
+   * @param page 页码，默认1
+   * @param limit 每页数量，默认100
+   * @returns 指定日期范围内的交易记录
+   */
+  async getByDateRange(
+    startDate: string,
+    endDate?: string,
+    page: number = 1,
+    limit: number = 100
+  ): Promise<Transaction[]> {
+    try {
+      // 如果没有提供结束日期，使用开始日期
+      const actualEndDate = endDate || startDate;
+      
+      // 构建查询参数
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: actualEndDate,
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const url = `${this.baseUrl}/transactions?${params.toString()}`;
+      
+      console.log(`正在从API获取日期范围交易记录: ${startDate} ~ ${actualEndDate}`);
+      const response = await this.request(url);
+
+      if (!response.success) {
+        throw new Error(response.error || "获取数据失败");
+      }
+
+      const transactions = response.data.map((apiTx: any) => this.convertFromApiFormat(apiTx));
+
+      console.log(`获取到 ${transactions.length} 笔交易记录 (${startDate} ~ ${actualEndDate})`);
+      return transactions;
+    } catch (error) {
+      console.error("从API获取日期范围交易记录时发生错误:", error);
+      throw new Error(`无法获取日期范围交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
+    }
+  }
+
+  /**
+   * 获取今天的交易记录
+   * @returns 今天的交易记录
+   */
+  async getTodayTransactions(): Promise<Transaction[]> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 格式
+    return await this.getByDateRange(today);
+  }
+
+  /**
    * 清空所有交易记录（仅用于测试，实际API可能不提供此功能）
    */
   async clear(): Promise<void> {

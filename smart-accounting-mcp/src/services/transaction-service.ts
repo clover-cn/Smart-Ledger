@@ -15,6 +15,9 @@ interface IStorageService {
   saveBatch(transactions: Transaction[]): Promise<void>;
   getAll(): Promise<Transaction[]>;
   clear(): Promise<void>;
+  // 新增方法：支持日期范围查询的接口（仅API存储支持）
+  getByDateRange?(startDate: string, endDate?: string, page?: number, limit?: number): Promise<Transaction[]>;
+  getTodayTransactions?(): Promise<Transaction[]>;
 }
 
 /**
@@ -193,6 +196,14 @@ export class TransactionService {
    */
   async getTodayTransactions(): Promise<Transaction[]> {
     try {
+      // 检查存储服务是否支持优化查询
+      if (this.storageService.getTodayTransactions) {
+        console.log('使用优化的当天交易记录查询');
+        return await this.storageService.getTodayTransactions();
+      }
+      
+      // 降级到原有实现（适用于文件存储）
+      console.log('使用传统的当天交易记录查询');
       const allTransactions = await this.getAllTransactions();
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -213,6 +224,67 @@ export class TransactionService {
       });
     } catch (error) {
       console.error('获取当天交易记录时发生错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 根据日期范围获取交易记录
+   * @param startDate 开始日期 (YYYY-MM-DD 格式)
+   * @param endDate 结束日期 (YYYY-MM-DD 格式，可选，默认等于 startDate)
+   * @param page 页码，默认1
+   * @param limit 每页数量，默认100
+   * @returns 指定日期范围内的交易记录
+   */
+  async getTransactionsByDateRange(
+    startDate: string,
+    endDate?: string,
+    page: number = 1,
+    limit: number = 100
+  ): Promise<Transaction[]> {
+    try {
+      // 验证日期格式
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        throw new Error('开始日期格式无效，请使用 YYYY-MM-DD 格式');
+      }
+      
+      if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        throw new Error('结束日期格式无效，请使用 YYYY-MM-DD 格式');
+      }
+
+      // 检查存储服务是否支持优化查询
+      if (this.storageService.getByDateRange) {
+        console.log(`使用优化的日期范围查询: ${startDate} ~ ${endDate || startDate}`);
+        return await this.storageService.getByDateRange(startDate, endDate, page, limit);
+      }
+      
+      // 降级到原有实现（适用于文件存储）
+      console.log(`使用传统的日期范围查询: ${startDate} ~ ${endDate || startDate}`);
+      const allTransactions = await this.getAllTransactions();
+      const actualEndDate = endDate || startDate;
+      
+      const startDateTime = new Date(startDate + 'T00:00:00');
+      const endDateTime = new Date(actualEndDate + 'T23:59:59');
+      
+      // 筛选日期范围内的交易记录
+      const filteredTransactions = allTransactions.filter(tx => {
+        const txDate = new Date(tx.timestamp);
+        return txDate >= startDateTime && txDate <= endDateTime;
+      });
+      
+      // 按时间倒序排列
+      const sortedTransactions = filteredTransactions.sort((a, b) => {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // 手动分页
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      return sortedTransactions.slice(startIndex, endIndex);
+    } catch (error) {
+      console.error('获取日期范围交易记录时发生错误:', error);
       throw error;
     }
   }
@@ -265,7 +337,7 @@ export class TransactionService {
     suggestion: string;
   }> {
     try {
-      const allTransactions = await this.getAllTransactions();
+      const allTransactions = await this.getTodayTransactions();
       const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
 
       // 过滤时间窗口内的交易
