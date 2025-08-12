@@ -15,6 +15,9 @@ interface IStorageService {
   saveBatch(transactions: Transaction[]): Promise<void>;
   getAll(): Promise<Transaction[]>;
   clear(): Promise<void>;
+  // 删除方法
+  delete(transactionId: string): Promise<void>;
+  deleteBatch(transactionIds: string[]): Promise<void>;
   // 新增方法：支持日期范围查询的接口（仅API存储支持）
   getByDateRange?(startDate: string, endDate?: string, page?: number, limit?: number): Promise<Transaction[]>;
   getTodayTransactions?(): Promise<Transaction[]>;
@@ -496,5 +499,49 @@ export class TransactionService {
     }
     
     return matches / maxLen;
+  }
+
+  /**
+   * 删除指定的交易记录
+   * @param transactionId 要删除的交易记录ID
+   * @returns Promise<void>
+   */
+  async deleteTransaction(transactionId: string): Promise<void> {
+    if (!transactionId || transactionId.trim() === '') {
+      throw new Error('交易记录ID不能为空');
+    }
+
+    try {
+      await this.storageService.delete(transactionId);
+      console.log(`交易记录删除成功: ${transactionId}`);
+    } catch (error) {
+      console.error('删除交易记录时发生错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量删除多笔交易记录
+   * @param transactionIds 要删除的交易记录ID数组
+   * @returns Promise<void>
+   */
+  async deleteTransactionBatch(transactionIds: string[]): Promise<void> {
+    if (!transactionIds || transactionIds.length === 0) {
+      throw new Error('交易记录ID列表不能为空');
+    }
+
+    // 验证所有ID都是有效的
+    const invalidIds = transactionIds.filter(id => !id || id.trim() === '');
+    if (invalidIds.length > 0) {
+      throw new Error('存在无效的交易记录ID');
+    }
+
+    try {
+      await this.storageService.deleteBatch(transactionIds);
+      console.log(`批量删除 ${transactionIds.length} 笔交易记录成功`);
+    } catch (error) {
+      console.error('批量删除交易记录时发生错误:', error);
+      throw error;
+    }
   }
 }

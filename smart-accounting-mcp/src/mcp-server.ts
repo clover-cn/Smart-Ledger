@@ -556,34 +556,108 @@ server.tool(
   }
 );
 
-// 删除交易记录工具 - 提示不支持功能
+// 删除交易记录工具
 server.tool(
   "deleteTransaction",
-  "删除已记录的财务交易 - 根据交易ID删除交易记录(暂时不支持，请手动到记账应用的网页版上进行操作)",
+  "删除已记录的财务交易 - 根据交易ID删除交易记录(id必须取自上下文记录查询记录，不能自己模拟生成)。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
   {
     id: z.string().describe("要删除的交易记录ID"),
   },
   async ({ id }) => {
-    console.log("用户尝试删除交易记录", { id });
+    console.log("删除交易记录", { id });
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            {
-              success: false,
-              supported: false,
-              message: "抱歉，删除账单功能暂时不支持",
-              instruction: "如需删除账单，请手动到记账应用的网页版上进行操作",
-              requestedId: id,
-              note: "为确保数据安全和防止误删，删除功能需要在网页版中进行",
-            },
-            null,
-            2
-          ),
-        },
-      ],
-    };
+    try {
+      await transactionService.deleteTransaction(id);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                message: `交易记录已成功删除`,
+                deletedId: id,
+                note: "删除操作已完成，此操作不可撤销",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } catch (error: any) {
+      console.error("删除交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: error.message,
+                message: "删除交易记录失败",
+                requestedId: id,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  }
+);
+
+// 批量删除交易记录工具
+server.tool(
+  "deleteTransactionBatch",
+  "批量删除多笔已记录的财务交易 - 根据交易ID数组批量删除交易记录(id必须取自上下文记录查询记录，不能自己模拟生成)。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
+  {
+    ids: z.array(z.string()).min(1).describe("要删除的交易记录ID数组，至少包含一个ID"),
+  },
+  async ({ ids }) => {
+    console.log("批量删除交易记录", { count: ids.length, ids });
+
+    try {
+      await transactionService.deleteTransactionBatch(ids);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                message: `成功批量删除 ${ids.length} 笔交易记录`,
+                deletedIds: ids,
+                note: "批量删除操作已完成，此操作不可撤销",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } catch (error: any) {
+      console.error("批量删除交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: error.message,
+                message: "批量删除交易记录失败",
+                requestedIds: ids,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
   }
 );

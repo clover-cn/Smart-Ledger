@@ -194,6 +194,88 @@ export class StorageService {
   }
 
   /**
+   * 删除指定的交易记录
+   * @param transactionId 要删除的交易记录ID
+   */
+  async delete(transactionId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.writeQueue.push(async () => {
+        await this.acquireLock();
+        try {
+          // 读取现有数据
+          const existingTransactions = await this.getAll();
+          
+          // 查找要删除的交易记录
+          const index = existingTransactions.findIndex(tx => tx.id === transactionId);
+          if (index === -1) {
+            throw new Error('交易记录不存在');
+          }
+          
+          // 删除交易记录
+          existingTransactions.splice(index, 1);
+          
+          // 将数据序列化并写入文件
+          const jsonData = JSON.stringify(existingTransactions, null, 2);
+          await fs.writeFile(this.dbPath, jsonData, 'utf-8');
+          
+          console.log(`交易记录已删除: ${transactionId}`);
+          resolve();
+        } catch (error) {
+          console.error('删除交易记录时发生错误:', error);
+          reject(new Error(`无法删除交易记录: ${error instanceof Error ? error.message : '未知错误'}`));
+        } finally {
+          await this.releaseLock();
+        }
+      });
+      
+      // 处理队列
+      this.processWriteQueue();
+    });
+  }
+
+  /**
+   * 批量删除多笔交易记录
+   * @param transactionIds 要删除的交易记录ID数组
+   */
+  async deleteBatch(transactionIds: string[]): Promise<void> {
+    if (transactionIds.length === 0) return;
+    
+    return new Promise((resolve, reject) => {
+      this.writeQueue.push(async () => {
+        await this.acquireLock();
+        try {
+          // 读取现有数据
+          const existingTransactions = await this.getAll();
+          
+          // 过滤掉要删除的交易记录
+          const remainingTransactions = existingTransactions.filter(tx => !transactionIds.includes(tx.id));
+          
+          // 检查是否有记录被删除
+          const deletedCount = existingTransactions.length - remainingTransactions.length;
+          if (deletedCount === 0) {
+            throw new Error('没有找到要删除的交易记录');
+          }
+          
+          // 将数据序列化并写入文件
+          const jsonData = JSON.stringify(remainingTransactions, null, 2);
+          await fs.writeFile(this.dbPath, jsonData, 'utf-8');
+          
+          console.log(`批量删除 ${deletedCount} 笔交易记录成功`);
+          resolve();
+        } catch (error) {
+          console.error('批量删除交易记录时发生错误:', error);
+          reject(new Error(`无法批量删除交易记录: ${error instanceof Error ? error.message : '未知错误'}`));
+        } finally {
+          await this.releaseLock();
+        }
+      });
+      
+      // 处理队列
+      this.processWriteQueue();
+    });
+  }
+
+  /**
    * 清空所有交易记录（主要用于测试）
    */
   async clear(): Promise<void> {

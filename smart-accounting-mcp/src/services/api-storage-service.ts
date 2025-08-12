@@ -292,6 +292,59 @@ export class ApiStorageService {
   }
 
   /**
+   * 删除指定的交易记录
+   * @param transactionId 要删除的交易记录ID
+   */
+  async delete(transactionId: string): Promise<void> {
+    try {
+      const url = `${this.baseUrl}/transactions/${encodeURIComponent(transactionId)}`;
+
+      console.log(`正在删除交易记录: ${transactionId}`);
+      const response = await this.request(url, {
+        method: "DELETE",
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || "删除失败");
+      }
+
+      console.log(`交易记录已删除: ${transactionId}`);
+    } catch (error) {
+      console.error("API删除交易记录时发生错误:", error);
+      throw new Error(`无法删除交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
+    }
+  }
+
+  /**
+   * 批量删除多笔交易记录
+   * @param transactionIds 要删除的交易记录ID数组
+   */
+  async deleteBatch(transactionIds: string[]): Promise<void> {
+    if (transactionIds.length === 0) return;
+
+    try {
+      const url = `${this.baseUrl}/transactions/batch`;
+
+      console.log(`正在批量删除 ${transactionIds.length} 笔交易记录`);
+      const response = await this.request(url, {
+        method: "DELETE",
+        body: JSON.stringify({
+          ids: transactionIds,
+        }),
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || "批量删除失败");
+      }
+
+      console.log(`批量删除 ${transactionIds.length} 笔交易记录成功`);
+    } catch (error) {
+      console.error("API批量删除交易记录时发生错误:", error);
+      throw new Error(`无法批量删除交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
+    }
+  }
+
+  /**
    * 清空所有交易记录（仅用于测试，实际API可能不提供此功能）
    */
   async clear(): Promise<void> {
