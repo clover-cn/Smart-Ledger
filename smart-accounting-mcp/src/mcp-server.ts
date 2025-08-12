@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { TransactionService } from "./services/transaction-service.js";
+import { parseRelativeDate } from "./utils/date-parser.js";
 
 // 创建智能记账服务实例
 const transactionService = new TransactionService();
@@ -310,17 +311,10 @@ server.tool("getTodayTransactions", "获取当天的财务交易记录 - 只返�
 // 获取指定日期范围交易记录工具
 server.tool(
   "getTransactionsByDateRange",
-  "根据日期范围获取财务交易记录 - 支持自定义时间范围查询，相比获取全部记录更高效，减少服务器压力和网络传输",
+  "根据日期范围获取财务交易记录 - 支持自定义时间范围查询和相对时间（如昨天、前天等），相比获取全部记录更高效，减少服务器压力和网络传输",
   {
-    startDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "开始日期格式必须是 YYYY-MM-DD")
-      .describe("开始日期，格式：YYYY-MM-DD"),
-    endDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "结束日期格式必须是 YYYY-MM-DD")
-      .optional()
-      .describe("结束日期，格式：YYYY-MM-DD，可选，默认等于开始日期"),
+    startDate: z.string().describe("开始日期，支持 YYYY-MM-DD 格式或相对时间（如：昨天、前天、大前天、一周前等）"),
+    endDate: z.string().optional().describe("结束日期，支持 YYYY-MM-DD 格式或相对时间，可选，默认等于开始日期"),
     page: z.number().int().min(1).default(1).optional().describe("页码，从1开始，默认第1页"),
     limit: z.number().int().min(1).max(100).default(20).optional().describe("每页记录数，最大100条，默认20条"),
   },
@@ -328,10 +322,43 @@ server.tool(
     console.log("获取日期范围交易记录", { startDate, endDate, page, limit });
 
     try {
-      const transactions = await transactionService.getTransactionsByDateRange(startDate, endDate, page, limit);
+      // 先尝试解析相对时间
+      let actualStartDate = startDate;
+      let actualEndDate = endDate;
+      let startRelativeInfo = "";
+      let endRelativeInfo = "";
 
-      const actualEndDate = endDate || startDate;
-      const isToday = startDate === new Date().toISOString().split("T")[0] && actualEndDate === startDate;
+      // 解析开始日期的相对时间
+      const startParseResult = parseRelativeDate(startDate);
+      if (startParseResult.found && startParseResult.date) {
+        actualStartDate = startParseResult.date.toISOString().split("T")[0]; // YYYY-MM-DD
+        startRelativeInfo = `"${startParseResult.keyword}" -> ${actualStartDate}`;
+        console.log(`检测到开始日期相对时间: ${startRelativeInfo}`);
+      }
+
+      // 解析结束日期的相对时间（如果提供）
+      if (endDate) {
+        const endParseResult = parseRelativeDate(endDate);
+        if (endParseResult.found && endParseResult.date) {
+          actualEndDate = endParseResult.date.toISOString().split("T")[0];
+          endRelativeInfo = `"${endParseResult.keyword}" -> ${actualEndDate}`;
+          console.log(`检测到结束日期相对时间: ${endRelativeInfo}`);
+        }
+      }
+
+      // 验证最终的日期格式
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(actualStartDate)) {
+        throw new Error("开始日期格式无效，请使用 YYYY-MM-DD 格式或相对时间（如：昨天、前天）");
+      }
+
+      if (actualEndDate && !/^\d{4}-\d{2}-\d{2}$/.test(actualEndDate)) {
+        throw new Error("结束日期格式无效，请使用 YYYY-MM-DD 格式或相对时间（如：昨天、前天）");
+      }
+
+      const transactions = await transactionService.getTransactionsByDateRange(actualStartDate, actualEndDate, page, limit);
+
+      const finalEndDate = actualEndDate || actualStartDate;
+      const isToday = actualStartDate === new Date().toISOString().split("T")[0] && finalEndDate === actualStartDate;
 
       return {
         content: [
@@ -340,7 +367,17 @@ server.tool(
             text: JSON.stringify(
               {
                 success: true,
-                dateRange: `${startDate} ~ ${actualEndDate}`,
+                originalInput: {
+                  startDate: startDate,
+                  endDate: endDate,
+                },
+                resolvedDates: {
+                  startDate: actualStartDate,
+                  endDate: finalEndDate,
+                  startRelativeInfo: startRelativeInfo || "直接使用日期格式",
+                  endRelativeInfo: endRelativeInfo || (endDate ? "直接使用日期格式" : "默认等于开始日期"),
+                },
+                dateRange: `${actualStartDate} ~ ${finalEndDate}`,
                 isToday: isToday,
                 page: page,
                 limit: limit,
@@ -367,7 +404,10 @@ server.tool(
                 success: false,
                 error: error.message,
                 message: "获取日期范围交易记录失败",
-                dateRange: `${startDate} ~ ${endDate || startDate}`,
+                originalInput: {
+                  startDate: startDate,
+                  endDate: endDate,
+                },
               },
               null,
               2
@@ -537,7 +577,7 @@ server.tool(
     try {
       // 构建更新数据，只包含提供的字段
       const updateData: any = {};
-      
+
       if (type !== undefined) {
         updateData.type = type;
       }
