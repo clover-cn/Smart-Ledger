@@ -519,49 +519,102 @@ server.tool(
   }
 );
 
-// 修改交易记录工具 - 提示不支持功能
+// 修改交易记录工具 - 真正实现修改功能
 server.tool(
   "updateTransaction",
-  "修改已记录的财务交易 - 根据交易ID修改交易信息(暂时不支持，请手动到记账应用的网页版上进行操作)",
+  "修改已记录的财务交易 - 根据交易ID修改交易信息。可以部分更新，只需要提供要修改的字段。",
   {
-    id: z.string().describe("要修改的交易记录ID"),
+    id: z.string().describe("要修改的交易记录ID(id必须取自上下文记录查询记录，不能自己模拟生成)"),
     type: z.enum(["income", "expense"]).optional().describe("交易类型：income（收入）或 expense（支出）"),
     amount: z.number().positive().optional().describe("交易金额，必须为正数"),
-    category: z.string().optional().describe("交易分类"),
+    category: z.string().optional().describe(`交易分类，${categoryList}`),
     description: z.string().optional().describe("交易描述"),
-    tags: z.array(z.string()).optional().describe("交易标签"),
+    tags: z.array(z.string()).optional().describe("交易标签，例如 ['reimbursement'] 表示可报销"),
   },
   async ({ id, type, amount, category, description, tags }) => {
-    console.log("用户尝试修改交易记录", { id, type, amount, category, description, tags });
+    console.log("修改交易记录", { id, type, amount, category, description, tags });
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            {
-              success: false,
-              supported: false,
-              message: "抱歉，修改账单功能暂时不支持",
-              instruction: "如需修改账单，请手动到记账应用的网页版上进行操作",
-              requestedId: id,
-              note: "为确保数据安全和一致性，修改功能需要在网页版中进行",
-            },
-            null,
-            2
-          ),
-        },
-      ],
-    };
+    try {
+      // 构建更新数据，只包含提供的字段
+      const updateData: any = {};
+      
+      if (type !== undefined) {
+        updateData.type = type;
+      }
+      if (amount !== undefined) {
+        updateData.amount = amount;
+      }
+      if (category !== undefined) {
+        updateData.category = category;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      if (tags !== undefined) {
+        updateData.tags = tags;
+      }
+
+      const updatedTransaction = await transactionService.updateTransaction(id, updateData);
+
+      // 构建确认消息
+      const typeText = updatedTransaction.type === "expense" ? "支出" : "收入";
+      const reimbursableText = updatedTransaction.tags?.includes("reimbursement") || updatedTransaction.tags?.includes("可报销") ? "可报销" : "";
+      const confirmMessage = `交易记录已成功更新：${reimbursableText}${typeText} ¥${updatedTransaction.amount} - ${updatedTransaction.category}`;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                message: confirmMessage,
+                transaction: {
+                  id: updatedTransaction.id,
+                  type: updatedTransaction.type,
+                  amount: updatedTransaction.amount,
+                  category: updatedTransaction.category,
+                  description: updatedTransaction.description,
+                  tags: updatedTransaction.tags,
+                  timestamp: updatedTransaction.timestamp,
+                },
+                note: "交易记录更新完成",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } catch (error: any) {
+      console.error("修改交易记录失败:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: error.message,
+                message: "修改交易记录失败",
+                requestedId: id,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
   }
 );
 
 // 删除交易记录工具
 server.tool(
   "deleteTransaction",
-  "删除已记录的财务交易 - 根据交易ID删除交易记录(id必须取自上下文记录查询记录，不能自己模拟生成)。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
+  "删除已记录的财务交易 - 根据交易ID删除交易记录。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
   {
-    id: z.string().describe("要删除的交易记录ID"),
+    id: z.string().describe("要删除的交易记录ID(id必须取自上下文记录查询记录，不能自己模拟生成)"),
   },
   async ({ id }) => {
     console.log("删除交易记录", { id });
@@ -612,9 +665,9 @@ server.tool(
 // 批量删除交易记录工具
 server.tool(
   "deleteTransactionBatch",
-  "批量删除多笔已记录的财务交易 - 根据交易ID数组批量删除交易记录(id必须取自上下文记录查询记录，不能自己模拟生成)。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
+  "批量删除多笔已记录的财务交易 - 根据交易ID数组批量删除交易记录。注意：此操作不可撤销，请谨慎使用，删除前必须经过用户明确同意。",
   {
-    ids: z.array(z.string()).min(1).describe("要删除的交易记录ID数组，至少包含一个ID"),
+    ids: z.array(z.string()).min(1).describe("要删除的交易记录ID数组，至少包含一个ID(id必须取自上下文记录查询记录，不能自己模拟生成)"),
   },
   async ({ ids }) => {
     console.log("批量删除交易记录", { count: ids.length, ids });

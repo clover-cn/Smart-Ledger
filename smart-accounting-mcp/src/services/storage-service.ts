@@ -276,6 +276,70 @@ export class StorageService {
   }
 
   /**
+   * 更新指定的交易记录
+   * @param transactionId 要更新的交易记录ID
+   * @param updateData 要更新的交易数据（部分字段）
+   */
+  async update(transactionId: string, updateData: Partial<Transaction>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.writeQueue.push(async () => {
+        await this.acquireLock();
+        try {
+          // 读取现有数据
+          const existingTransactions = await this.getAll();
+          
+          // 查找要更新的交易记录
+          const index = existingTransactions.findIndex(tx => tx.id === transactionId);
+          if (index === -1) {
+            throw new Error('交易记录不存在');
+          }
+          
+          // 更新交易记录
+          const updatedTransaction = { ...existingTransactions[index] };
+          
+          // 只更新提供的字段
+          if (updateData.type !== undefined) {
+            updatedTransaction.type = updateData.type;
+          }
+          if (updateData.amount !== undefined) {
+            updatedTransaction.amount = updateData.amount;
+          }
+          if (updateData.category !== undefined) {
+            updatedTransaction.category = updateData.category;
+          }
+          if (updateData.description !== undefined) {
+            updatedTransaction.description = updateData.description;
+          }
+          if (updateData.tags !== undefined) {
+            updatedTransaction.tags = updateData.tags;
+          }
+          if (updateData.timestamp !== undefined) {
+            updatedTransaction.timestamp = updateData.timestamp;
+          }
+          
+          // 替换原记录
+          existingTransactions[index] = updatedTransaction;
+          
+          // 将数据序列化并写入文件
+          const jsonData = JSON.stringify(existingTransactions, null, 2);
+          await fs.writeFile(this.dbPath, jsonData, 'utf-8');
+          
+          console.log(`交易记录已更新: ${transactionId}`);
+          resolve();
+        } catch (error) {
+          console.error('更新交易记录时发生错误:', error);
+          reject(new Error(`无法更新交易记录: ${error instanceof Error ? error.message : '未知错误'}`));
+        } finally {
+          await this.releaseLock();
+        }
+      });
+      
+      // 处理队列
+      this.processWriteQueue();
+    });
+  }
+
+  /**
    * 清空所有交易记录（主要用于测试）
    */
   async clear(): Promise<void> {

@@ -18,6 +18,8 @@ interface IStorageService {
   // 删除方法
   delete(transactionId: string): Promise<void>;
   deleteBatch(transactionIds: string[]): Promise<void>;
+  // 更新方法
+  update(transactionId: string, updateData: Partial<Transaction>): Promise<void>;
   // 新增方法：支持日期范围查询的接口（仅API存储支持）
   getByDateRange?(startDate: string, endDate?: string, page?: number, limit?: number): Promise<Transaction[]>;
   getTodayTransactions?(): Promise<Transaction[]>;
@@ -541,6 +543,99 @@ export class TransactionService {
       console.log(`批量删除 ${transactionIds.length} 笔交易记录成功`);
     } catch (error) {
       console.error('批量删除交易记录时发生错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新指定的交易记录
+   * @param transactionId 要更新的交易记录ID
+   * @param updateData 要更新的交易数据（部分字段）
+   * @returns Promise<Transaction> 更新后的交易记录
+   */
+  async updateTransaction(transactionId: string, updateData: Partial<TransactionData>): Promise<Transaction> {
+    if (!transactionId || transactionId.trim() === '') {
+      throw new Error('交易记录ID不能为空');
+    }
+
+    // 验证更新数据
+    if (!updateData || Object.keys(updateData).length === 0) {
+      throw new Error('更新数据不能为空');
+    }
+
+    // 验证更新数据的有效性
+    if (updateData.type !== undefined && updateData.type !== 'income' && updateData.type !== 'expense') {
+      throw new Error('交易类型必须是 income 或 expense');
+    }
+
+    if (updateData.amount !== undefined && !isValidAmount(updateData.amount)) {
+      throw new Error('金额必须大于0');
+    }
+
+    if (updateData.description !== undefined && (!updateData.description || updateData.description.trim() === '')) {
+      throw new Error('描述信息不能为空');
+    }
+
+    try {
+      // 先获取原始记录以验证是否存在
+      const allTransactions = await this.getAllTransactions();
+      const existingTransaction = allTransactions.find(tx => tx.id === transactionId);
+      
+      if (!existingTransaction) {
+        throw new Error('交易记录不存在');
+      }
+
+      // 构建更新数据，需要转换为Transaction格式
+      const updateTransactionData: Partial<Transaction> = {};
+      
+      if (updateData.type !== undefined) {
+        updateTransactionData.type = updateData.type;
+      }
+      
+      if (updateData.amount !== undefined) {
+        updateTransactionData.amount = updateData.amount;
+      }
+      
+      if (updateData.category !== undefined) {
+        updateTransactionData.category = updateData.category;
+      } else if (updateData.description !== undefined) {
+        // 如果没有提供新分类但有新描述，重新进行智能分类
+        updateTransactionData.category = getSmartCategory(
+          updateData.description,
+          updateData.type || existingTransaction.type
+        );
+      }
+      
+      if (updateData.description !== undefined) {
+        updateTransactionData.description = updateData.description;
+        
+        // 尝试从新描述中解析相对时间
+        const parseResult = parseRelativeDate(updateData.description);
+        if (parseResult.found && parseResult.timestamp) {
+          updateTransactionData.timestamp = parseResult.timestamp;
+          console.log(`检测到相对时间: "${parseResult.keyword}" -> ${parseResult.timestamp}`);
+        }
+      }
+      
+      if (updateData.tags !== undefined) {
+        updateTransactionData.tags = updateData.tags;
+      }
+
+      // 执行更新
+      await this.storageService.update(transactionId, updateTransactionData);
+      
+      // 获取更新后的记录
+      const updatedTransactions = await this.getAllTransactions();
+      const updatedTransaction = updatedTransactions.find(tx => tx.id === transactionId);
+      
+      if (!updatedTransaction) {
+        throw new Error('获取更新后的交易记录失败');
+      }
+
+      console.log(`交易记录更新成功: ${transactionId}`);
+      return updatedTransaction;
+    } catch (error) {
+      console.error('更新交易记录时发生错误:', error);
       throw error;
     }
   }

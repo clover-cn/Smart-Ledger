@@ -345,6 +345,59 @@ export class ApiStorageService {
   }
 
   /**
+   * 更新指定的交易记录
+   * @param transactionId 要更新的交易记录ID
+   * @param updateData 要更新的交易数据（部分字段）
+   */
+  async update(transactionId: string, updateData: Partial<Transaction>): Promise<void> {
+    try {
+      const url = `${this.baseUrl}/transactions/${encodeURIComponent(transactionId)}`;
+
+      // 只传递需要更新的字段，转换为API格式
+      const apiUpdateData: any = {};
+      
+      if (updateData.type !== undefined) {
+        apiUpdateData.type = updateData.type;
+      }
+      
+      if (updateData.amount !== undefined) {
+        apiUpdateData.amount = updateData.amount;
+      }
+      
+      if (updateData.category !== undefined) {
+        apiUpdateData.category = updateData.category;
+      }
+      
+      if (updateData.description !== undefined) {
+        apiUpdateData.description = updateData.description;
+      }
+      
+      if (updateData.tags !== undefined) {
+        apiUpdateData.tags = updateData.tags;
+      }
+      
+      if (updateData.timestamp !== undefined) {
+        apiUpdateData.transaction_date = updateData.timestamp.split(" ")[0]; // 从时间戳提取日期部分
+      }
+
+      console.log(`正在更新交易记录: ${transactionId}`);
+      const response = await this.request(url, {
+        method: "PUT",
+        body: JSON.stringify(apiUpdateData),
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || "更新失败");
+      }
+
+      console.log(`交易记录已更新: ${transactionId}`);
+    } catch (error) {
+      console.error("API更新交易记录时发生错误:", error);
+      throw new Error(`无法更新交易记录: ${error instanceof Error ? error.message : "未知错误"}`);
+    }
+  }
+
+  /**
    * 清空所有交易记录（仅用于测试，实际API可能不提供此功能）
    */
   async clear(): Promise<void> {
